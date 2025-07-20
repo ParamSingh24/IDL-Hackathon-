@@ -1,0 +1,2408 @@
+sk_lahp42w4_8K8JJohnNZZFOaNypvGOPINi
+api sarvam
+
+---
+title: STT API Tutorial Using Saarika Model
+description: >-
+  A step-by-step guide on how to use the Sarvam AI STT API for speech-to-text
+  tasks
+---
+
+## **Overview**  
+
+This notebook demonstrates how to use the Saarika Model for **Speech-to-Text (STT) API**.It covers both short and long audio transcription, including how to split large files into chunks and transcribe them using the real-time API.  
+It includes instructions for installation, setting up the API key, uploading audio files, and using the API for transcription and translation.
+
+
+## 1. Installation
+Before you begin, ensure you have the necessary Python libraries installed. Run the following commands to install the required packages:
+
+
+
+```python
+!pip install sarvamai
+```
+
+
+```python
+from sarvamai import SarvamAI
+```
+
+## 2. Authentication
+
+To use the API, you need an API subscription key. Follow these steps to set up your API key:
+
+1. **Obtain your API key**: If you don’t have an API key, sign up on the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/) to get one.
+2. **Replace the placeholder key**: In the code below, replace "YOUR_SARVAM_AI_API_KEY" with your actual API key.
+
+
+```python
+SARVAM_API_KEY = "YOUR_SARVAM_AI_API_KEY"
+```
+
+### 2.1 Initialize the Client
+
+Create a Sarvam client instance using your API key. This client will be used to interact with the Speech-to-Text API.
+
+
+```python
+client = SarvamAI(api_subscription_key=SARVAM_API_KEY)
+```
+
+## 3. Uploading Audio Files
+
+To translate audio, you need to provide a `.wav` or `.mp3` file.
+
+#### Supported Environments:
+- Google Colab
+- Jupyter Notebook (VS Code, JupyterLab, etc.)
+
+####Instructions:
+- Ensure your audio file is in `.wav` **or** `.mp3` format.
+- Run the cell below. The uploader will automatically adjust based on your environment:
+  - **In Google Colab**: You'll be prompted to upload a `.wav` or `.mp3` file via a file picker.
+  - **In Jupyter Notebook**: You'll be prompted to enter the full file path of the `.wav` or `.mp3` file stored locally on your machine.
+- Once provided, the file will be available for use in the next step.
+
+
+
+```python
+import sys
+import os
+
+def get_audio_file():
+    supported_formats = ['.wav', '.mp3']
+
+    if 'google.colab' in sys.modules:
+        # Running in Google Colab: use upload widget
+        from google.colab import files
+        uploaded = files.upload()
+        audio_file_path = list(uploaded.keys())[0]
+        ext = os.path.splitext(audio_file_path)[1].lower()
+        if ext not in supported_formats:
+            print(f"Unsupported file format '{ext}'. Please upload a WAV or MP3 file.")
+            return None
+        print(f"File '{audio_file_path}' uploaded successfully in Colab!")
+        return audio_file_path
+    else:
+        # Running in Jupyter Notebook: input file path
+        audio_file_path = input("Enter the path to your MP3 or WAV file: ").strip()
+        ext = os.path.splitext(audio_file_path)[1].lower()
+        if not os.path.exists(audio_file_path):
+            print(f"File not found at: {audio_file_path}")
+            return None
+        if ext not in supported_formats:
+            print(f"Unsupported file format '{ext}'. Please provide a WAV or MP3 file.")
+            return None
+        print(f"File '{audio_file_path}' found successfully in Jupyter!")
+        return audio_file_path
+
+```
+
+
+```python
+#Enter the file path and enter/return.
+audio_file_path = get_audio_file()
+```
+
+## 4. Saarika-v2.5 Usage for STT
+
+The Saarika model can be used for converting speech to text across different scenarios.  
+It supports basic transcription, code-mixed speech, and automatic language detection for Indian languages.
+
+### 4.1 Basic Usage
+
+Basic transcription with a specified language code.  
+Ideal for single-language audio with clear speech and minimal noise.
+
+
+
+```python
+if audio_file_path:
+    with open(audio_file_path, "rb") as audio_file:
+        response = client.speech_to_text.transcribe(
+            file=audio_file,
+            model="saarika:v2.5",
+            language_code="en-IN"
+        )
+    print("Transcription Response:")
+    print(response)
+else:
+    print("No audio file found. Transcription aborted.")
+
+
+```
+
+### 4.2 Code-Mixed Speech
+
+Handles mid-sentence language switches intelligently.  
+Perfect for conversational speech in Indian multilingual settings.
+
+
+```python
+if audio_file_path:
+    with open(audio_file_path, "rb") as audio_file:
+        response = client.speech_to_text.transcribe(
+            file=audio_file,
+            model="saarika:v2.5"
+        )
+    print(response)
+else:
+    print("No valid audio file found.")
+```
+
+### 4.3 Automatic Language Detection
+
+Let Saarika detect the spoken language automatically.  
+Useful when input language is unknown or for multilingual speech.
+
+
+```python
+if audio_file_path:
+    with open(audio_file_path, "rb") as audio_file:
+        response = client.speech_to_text.transcribe(
+            file=audio_file,
+            model="saarika:v2.5",
+            language_code="unknown"
+        )
+    print(response)
+else:
+    print("No valid audio file found.")
+```
+
+## 5. Handling Long Audio Files
+
+If your audio file exceeds the 30-second limit supported by the **real-time transcription API**, you must split it into smaller chunks for accurate and successful transcription. 
+These smaller segments are then transcribed individually using the **real-time API**, and the results are stitched back together to form the final transcript.
+
+👉 For large audio files, switch to the **Batch API** designed for longer durations.  
+[🔗 Try the Batch API here](https://docs.sarvam.ai/api-reference-docs/speech-to-text/apis/batch) 
+
+---
+
+### When to Use
+- Audio length &gt; 30 seconds
+- **Real-time API** returns timeout or error due to size
+- You want to **batch process** long audio files for better accuracy and reliability
+
+
+### How It Works
+1. The full `.mp3` or `.wav` file is first **split into smaller chunks** (e.g., 29 seconds each)
+2. Each chunk is then transcribed **individually** using the **real-time API**
+3. The individual results are finally **combined** to form one seamless transcript
+
+&gt; ⚠️ For short audio files (&lt;30 seconds), you can skip this step and directly proceed with transcription using the real-time API.
+
+The functions below help with:
+- Prevents real-time API timeouts
+- Splitting large `.wav`or `.mp3` files into smaller chunks
+- Transcribing each chunk using the Saarika:v2.5
+- Collating results into a single transcript
+
+
+### 5.1 Define the split_audio Function
+
+This function splits a long `.mp3` or `.wav` audio file into smaller chunks (default: 29 seconds) using **FFmpeg**. 
+It ensures each segment remains within the real-time API's 30-second limit and stores them in the specified output directory.
+
+
+```python
+import os
+import subprocess
+
+def split_audio_ffmpeg(audio_path, chunk_duration=29, output_dir="chunks"):
+    os.makedirs(output_dir, exist_ok=True)
+    ext = os.path.splitext(audio_path)[1].lower()
+    base_name = os.path.splitext(os.path.basename(audio_path))[0]
+    output_pattern = os.path.join(output_dir, f"{base_name}_%03d{ext}")
+
+    codec = "pcm_s16le" if ext == ".wav" else "libmp3lame"
+
+    command = [
+        "ffmpeg",
+        "-i", audio_path,
+        "-f", "segment",
+        "-segment_time", str(chunk_duration),
+        "-c:a", codec,
+        output_pattern
+    ]
+
+    print("Running command:", " ".join(command))
+
+    result = subprocess.run(command, capture_output=True, text=True)
+    print("Return code:", result.returncode)
+    print("STDOUT:\n", result.stdout)
+    print("STDERR:\n", result.stderr)
+
+    output_files = sorted([
+        os.path.join(output_dir, f) for f in os.listdir(output_dir)
+        if f.endswith(ext)
+    ])
+
+    print("Chunks generated:", output_files)
+    return output_files
+
+```
+
+### **5.2 Define the `transcribe_audio_chunks` Function**
+
+This function takes the list of chunked audio file paths and uses the **Saarika real-time API** to transcribe each one individually.
+It collects all partial transcriptions and combines them into a single, complete transcript.
+
+
+
+```python
+def transcribe_audio_chunks_sdk(chunk_paths, client, model="saarika:v2.5", language_code="en-IN"):
+    
+    full_transcript = []
+
+    for idx, chunk_path in enumerate(chunk_paths):
+        print(f"\nTranscribing chunk {idx + 1}/{len(chunk_paths)} → {chunk_path}")
+        with open(chunk_path, "rb") as audio_file:
+            try:
+                response = client.speech_to_text.transcribe(
+                    file=audio_file,
+                    model=model,
+                    language_code=language_code
+                )
+                print("Chunk Response:", response)
+                full_transcript.append(str(response))
+            except Exception as e:
+                print(f"Error with chunk {chunk_path}: {e}")
+
+    return " ".join(full_transcript).strip()
+
+```
+
+### 5.3 Putting It All Together
+
+Call the `split_audio_ffmpeg()` function first to break the audio into chunks, and then pass those chunks to `transcribe_audio_chunks()` for transcription. 
+This two-step process ensures large audio files are handled smoothly using the real-time API.
+
+
+
+```python
+# 1. Split the audio
+chunks = split_audio_ffmpeg(audio_file_path)
+
+# 2. Transcribe each chunk and collate
+if chunks:
+    final_transcript = transcribe_audio_chunks_sdk(chunks, client)
+    print("\nFinal Combined Transcript:\n")
+    print(final_transcript)
+else:
+    print("No audio chunks generated. Transcription aborted.")
+ 
+```
+
+## 6. Error Handling  
+
+You may encounter these errors while using the API:  
+
+- **403 Forbidden** (`invalid_api_key_error`)  
+  - Cause: Invalid API key.  
+  - Solution: Use a valid API key from the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/).  
+
+- **429 Too Many Requests** (`insufficient_quota_error`)  
+  - Cause: Exceeded API quota.  
+  - Solution: Check your usage, upgrade if needed, or implement exponential backoff when retrying.  
+
+- **500 Internal Server Error** (`internal_server_error`)  
+  - Cause: Issue on our servers.  
+  - Solution: Try again later. If persistent, contact support.  
+
+- **400 Bad Request** (`invalid_request_error`)  
+  - Cause: Incorrect request formatting.  
+  - Solution: Verify your request structure, and parameters.  
+
+- **422 Unprocessable Entity Request** (`unprocessable_entity_error`)  
+  - Cause: Unable to detect the language of the input text.
+  - Solution: Explicitly pass the source_language_code parameter with a supported language.
+
+
+## 7. Additional Resources
+
+For more details, refer to the our official documentation and we are always there to support and help you on our Discord Server:
+
+- **Documentation**: [docs.sarvam.ai](https://docs.sarvam.ai)  
+- **Community**: [Join the Discord Community](https://discord.gg/hTuVuPNF)
+
+
+## 8. Final Notes
+
+- Keep your API key secure.
+- Use clear audio for best results.
+- Explore advanced features like diarization and translation.
+
+**Keep Building!** 🚀
+
+
+```python
+
+```
+---
+title: Speech-to-Text Translation API Using Saaras Model
+description: >-
+  A step-by-step guide on how to use the STT-Translate API for translating audio
+  files into text using Saaras
+---
+
+## **Overview**  
+
+This notebook provides a step-by-step guide on how to use the **STT-Translate API** for translating audio files into text using **Saaras**, this API automatically detects the input language, transcribes the speech, and translates the text to English.
+
+It includes instructions for installation, setting up the API key, uploading audio files, and translating audio using the API.
+
+
+## **1. Installation**
+Before you begin, ensure you have the necessary Python libraries installed. Run the following commands to install the required packages:
+
+
+
+```python
+!pip install sarvamai
+```
+
+
+```python
+from sarvamai import SarvamAI
+```
+
+## **2. Authentication**
+
+To use the API, you need an API subscription key. Follow these steps to set up your API key:
+
+1. **Obtain your API key**: If you don’t have an API key, sign up on the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/) to get one.
+2. **Replace the placeholder key**: In the code below, replace "YOUR_SARVAM_AI_API_KEY" with your actual API key.
+
+
+```python
+SARVAM_API_KEY = "YOUR_SARVAM_AI_API_KEY"
+```
+
+### **2.1 Initialize the Client**
+
+Create a Sarvam client instance using your API key. This client will be used to interact with the Saaras API.
+
+
+```python
+client = SarvamAI(api_subscription_key=SARVAM_API_KEY)
+```
+
+## **3. Uploading Audio Files**
+
+To translate audio, you need to provide a `.wav` or `.mp3` file.
+
+#### Supported Environments:
+- Google Colab
+- Jupyter Notebook (VS Code, JupyterLab, etc.)
+
+#### Instructions:
+- Ensure your audio file is in `.wav` **or** `.mp3` format.
+- Run the cell below. The uploader will automatically adjust based on your environment:
+  - **In Google Colab**: You'll be prompted to upload a `.wav` or `.mp3` file via a file picker.
+  - **In Jupyter Notebook**: You'll be prompted to enter the full file path of the `.wav` or `.mp3` file stored locally on your machine.
+- Once provided, the file will be available for use in the next step.
+
+
+
+```python
+import sys
+import os
+
+def get_audio_file():
+    supported_formats = ['.wav', '.mp3']
+
+    if 'google.colab' in sys.modules:
+        # Running in Google Colab: use upload widget
+        from google.colab import files
+        uploaded = files.upload()
+        audio_file_path = list(uploaded.keys())[0]
+        ext = os.path.splitext(audio_file_path)[1].lower()
+        if ext not in supported_formats:
+            print(f"Unsupported file format '{ext}'. Please upload a WAV or MP3 file.")
+            return None
+        print(f"File '{audio_file_path}' uploaded successfully in Colab!")
+        return audio_file_path
+    else:
+        # Running in Jupyter Notebook: input file path
+        audio_file_path = input("Enter the path to your MP3 or WAV file: ").strip()
+        ext = os.path.splitext(audio_file_path)[1].lower()
+        if not os.path.exists(audio_file_path):
+            print(f"File not found at: {audio_file_path}")
+            return None
+        if ext not in supported_formats:
+            print(f"Unsupported file format '{ext}'. Please provide a WAV or MP3 file.")
+            return None
+        print(f"File '{audio_file_path}' found successfully in Jupyter!")
+        return audio_file_path
+
+```
+
+
+```python
+#Enter the file path and enter/return.
+audio_file_path = get_audio_file()
+```
+
+## **4. Saaras-v2.5 Usage for STT Translate**
+
+The Saaras-v2 model can be used for converting speech to text across diverse, production-grade scenarios.
+It supports basic transcription, code-mixed Indian speech, automatic language detection, and domain-specific prompting — all optimized for real-world applications like telephony, multi-speaker audio, and more.
+
+### **4.1 Basic Usage**
+
+Basic transcription with specified language code.  
+Perfect for single-language content with clear audio quality.
+
+
+```python
+if audio_file_path:
+    with open(audio_file_path, "rb") as audio_file:
+        response = client.speech_to_text.translate(
+            file=audio_file,
+            model="saaras:v2.5"
+        )
+    print("Transcription Response:")
+    print(response)
+else:
+    print("No audio file found. Transcription aborted.")
+
+```
+
+### **4.2 Code-Mixed Speech**
+
+Handles mixed-language content with automatic detection of language switches within sentences.  
+Ideal for natural Indian conversations that mix multiple languages.
+
+
+```python
+if audio_file_path:
+    with open(audio_file_path, "rb") as audio_file:
+        response = client.speech_to_text.translate(
+            file=audio_file,
+            model="saaras:v2.5"
+        )
+    print(response)
+else:
+    print("No valid audio file found.")
+```
+
+### **4.3 Automatic Language Detection**
+
+Let Saaras automatically detect the language being spoken.  
+Useful when the input language is unknown or for handling multi-language content.
+
+
+```python
+if audio_file_path:
+    with open(audio_file_path, "rb") as audio_file:
+        response = client.speech_to_text.translate(
+            file=audio_file,
+            model="saaras:v2.5",
+        )
+    print(response)
+else:
+    print("No valid audio file found.")
+```
+
+### **4.4 Domain Prompting**
+
+Enhance transcription accuracy with domain-specific prompts and preserve important terms.  
+Perfect for specialized contexts like medical, legal, or technical content.
+
+
+```python
+if audio_file_path:
+    with open(audio_file_path, "rb") as audio_file:
+        response = client.speech_to_text.translate(
+            file=audio_file,
+            model="saaras:v2.5",
+            prompt="Medical consultation"
+        )
+    print(response)
+else:
+    print("No valid audio file found.")
+```
+
+## **5. Handling Long Audio Files**
+
+If your audio file exceeds the 30-second limit supported by the **real-time transcription API**, you must split it into smaller chunks for accurate and successful transcription. 
+These smaller segments are then transcribed individually using the **real-time API**, and the results are stitched back together to form the final transcript.
+
+👉 For large audio files, switch to the **Batch API** designed for longer durations.  
+[🔗 Try the Batch API here](https://github.com/sarvamai/sarvam-ai-cookbook/tree/main/notebooks/stt-translate/stt-translate-batch-api) 
+
+---
+
+### When to Use
+- Audio length &gt;30 seconds
+- **Real-time API** returns timeout or error due to size
+- You want to **batch process** long audio files for better accuracy and reliability
+
+
+### How It Works
+1. The full `.mp3` or `.wav` file is first **split into smaller chunks** (e.g., 29 seconds each)
+2. Each chunk is then transcribed **individually** using the **real-time API**
+3. The individual results are finally **combined** to form one seamless transcript
+
+&gt; ⚠️ For short audio files (&lt;30 seconds), you can skip this step and directly proceed with transcription using the real-time API.
+
+The functions below help with:
+- Prevents real-time API timeouts
+- Splitting large `.wav`or `.mp3` files into smaller chunks
+- Transcribing each chunk using the Saaras:v2.5
+- Collating results into a single transcript
+
+
+### **5.1 Define the split_audio Function**
+
+This function splits a long `.mp3` or `.wav` audio file into smaller chunks (default: 29 seconds) using **FFmpeg**. 
+It ensures each segment remains within the real-time API's 30-second limit and stores them in the specified output directory.
+
+
+```python
+import os
+import subprocess
+
+def split_audio_ffmpeg(audio_path, chunk_duration=29, output_dir="chunks"):
+    os.makedirs(output_dir, exist_ok=True)
+    ext = os.path.splitext(audio_path)[1].lower()
+    base_name = os.path.splitext(os.path.basename(audio_path))[0]
+    output_pattern = os.path.join(output_dir, f"{base_name}_%03d{ext}")
+
+    codec = "pcm_s16le" if ext == ".wav" else "libmp3lame"
+
+    command = [
+        "ffmpeg",
+        "-i", audio_path,
+        "-f", "segment",
+        "-segment_time", str(chunk_duration),
+        "-c:a", codec,
+        output_pattern
+    ]
+
+    print("Running command:", " ".join(command))
+
+    result = subprocess.run(command, capture_output=True, text=True)
+    print("Return code:", result.returncode)
+    print("STDOUT:\n", result.stdout)
+    print("STDERR:\n", result.stderr)
+
+    output_files = sorted([
+        os.path.join(output_dir, f) for f in os.listdir(output_dir)
+        if f.endswith(ext)
+    ])
+
+    print("Chunks generated:", output_files)
+    return output_files
+
+```
+
+### **5.2 Define the `translate_audio_chunks` Function**
+
+This function takes the list of chunked audio file paths and uses the **Saaras real-time API** to translate each one individually.
+It collects all partial transcriptions and combines them into a single, complete transcript.
+
+
+
+```python
+def translate_audio_chunks(chunk_paths, client, model="saaras:v2.5"):
+    
+    full_transcript = []
+
+    for idx, chunk_path in enumerate(chunk_paths):
+        print(f"\nTranslating chunk {idx + 1}/{len(chunk_paths)} → {chunk_path}")
+        with open(chunk_path, "rb") as audio_file:
+            try:
+                response = client.speech_to_text.translate(
+                    file=audio_file,
+                    model=model
+                )
+                print("Chunk Response:", response)
+                full_transcript.append(str(response))
+            except Exception as e:
+                print(f"Error with chunk {chunk_path}: {e}")
+
+    return " ".join(full_transcript).strip()
+
+```
+
+### **5.3 Putting It All Together**
+
+Call the `split_audio_ffmpeg()` function first to break the audio into chunks, and then pass those chunks to `translate_audio_chunks()` for transcription. 
+This two-step process ensures large audio files are handled smoothly using the real-time API.
+
+
+
+```python
+# 1. Split the audio
+chunks = split_audio_ffmpeg(audio_file_path)
+
+# 2. Translate each chunk and collate
+if chunks:
+    final_transcript = translate_audio_chunks(chunks, client)
+    print("\nFinal Combined Transcript:\n")
+    print(final_transcript)
+else:
+    print("No audio chunks generated. Transcription aborted.")
+ 
+```
+
+## **6. Error Handling**  
+
+You may encounter these errors while using the API:  
+
+- **403 Forbidden** (`invalid_api_key_error`)  
+  - Cause: Invalid API key.  
+  - Solution: Use a valid API key from the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/).  
+
+- **429 Too Many Requests** (`insufficient_quota_error`)  
+  - Cause: Exceeded API quota.  
+  - Solution: Check your usage, upgrade if needed, or implement exponential backoff when retrying.  
+
+- **500 Internal Server Error** (`internal_server_error`)  
+  - Cause: Issue on our servers.  
+  - Solution: Try again later. If persistent, contact support.  
+
+- **400 Bad Request** (`invalid_request_error`)  
+  - Cause: Incorrect request formatting.  
+  - Solution: Verify your request structure, and parameters.  
+
+- **422 Unprocessable Entity Request** (`unprocessable_entity_error`)  
+  - Cause: Unable to detect the language of the input text.
+  - Solution: Explicitly pass the source_language_code parameter with a supported language.
+
+
+## **7. Additional Resources**
+
+For more details, refer to the our official documentation and we are always there to support and help you on our Discord Server:
+
+- **Documentation**: [docs.sarvam.ai](https://docs.sarvam.ai)  
+- **Community**: [Join the Discord Community](https://discord.gg/hTuVuPNF)
+
+
+## **8. Final Notes**
+
+- Keep your API key secure.
+- Use clear audio for best results.
+- Explore advanced features like diarization and translation.
+
+**Keep Building!** 🚀
+
+
+```python
+
+```
+# **Translate API using Mayura and Sarvam-Translate Models**
+
+# **Overview**
+
+This tutorial demonstrates how to use the **Sarvam translate API** to translate texts/paragraphs from one language to another. The API supports additional features such as transliteration(a type of conversion of a text from one script to another that involves swapping letters), output_Script and gender .
+
+## **1. Installation**
+
+Before you begin, ensure you have the necessary Python libraries installed. Run the following commands to install the required packages:
+
+```python
+!pip install -Uqq sarvamai
+
+```
+
+```python
+from sarvamai import SarvamAI
+```
+
+## **2. Authentication**
+
+To use the API, you need an API subscription key. Follow these steps to set up your API key:
+
+1. **Obtain your API key**: If you don’t have an API key, sign up on the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/) to get one.
+2. **Replace the placeholder key**: In the code below, replace "YOUR_SARVAM_AI_API_KEY" with your actual API key.
+
+```python
+SARVAM_API_KEY = "YOUR_SARVAM_API_KEY"
+```
+
+## **3. Understanding the Parameters**
+
+🔹 The API takes several key parameters:
+| **Parameter** | **Description** | **Mayura:v1** | **Sarvam-Translate:v1** |
+|-------------------------|---------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| `input` | The text to translate (max character limit) | 1000 characters | 2000 characters |
+| `source_language_code` | Language of the input text | Bengali, English, Gujarati, Hindi, Kannada, Malayalam, Marathi, Odia, Punjabi, Tamil, Telugu | All Mayura:v1 languages + Assamese, Bodo, Dogri, Konkani, Kashmiri, Maithili, Manipuri, Nepali, Sanskrit, Santali, Sindhi, Urdu |
+| `target_language_code` | Target language for translation | Same as source | Same as source |
+| `speaker_gender` | Gender of the speaker for better contextual translation | Supported | Supported |
+| `mode` | Tone or style of translation | Supports `formal`, `classic-colloquial`, `modern-colloquial` | `formal` supported |
+| `numerals_format` | Format for numerals in translation | `international` (0-9) or `native` (e.g., १-९) | `international` (0-9) or `native` (e.g., १-९) |
+
+**`language_code`** (String) – Newly added languages. Supported values:
+
+- `"as-IN"` (Assamese - India)
+- `"brx-IN"` (Bodo- India)
+- `"doi-IN"` (Dogri - India)
+- `"kok-IN"` (Konkani - India)
+- `"ks-IN"` (Kashmiri - India)
+- `"mai-IN"` (Maithili - India)
+- `"mni-IN"` (Manipuri (Meiteilon) - India)
+- `"ne-IN"` (Nepali - India)
+- `"sa-IN"` (Sanskrit - India)
+- `"sat-IN"` (Santali - India)
+- `"sd-IN"` (Sindhi - India)
+- `"ur-IN"` (Urdu - India)
+
+## **4. Basic Usage**
+
+### **4.1: Read the Document**
+
+We have two sample documents under the `data` folder:
+
+- [Download sample1.txt](https://github.com/sarvamai/sarvam-ai-cookbook/blob/main/notebooks/translate/data/sample3.txt)
+- [Download sample2.txt](https://github.com/sarvamai/sarvam-ai-cookbook/blob/main/notebooks/translate/data/sample4.txt)
+
+```python
+def read_file(file_path, lang_name):
+    try:
+        with open(file_path, "r", encoding="utf-8") as file:
+            # Read the first 5 lines
+            lines = [next(file) for _ in range(5)]
+            print(f"=== {lang_name} Text (First Few Lines) ===")
+            print("".join(lines))  # Print first few lines
+
+            # Read the remaining content
+            remaining_text = file.read()
+
+            # Combine all text
+            full_doc = "".join(lines) + remaining_text
+
+            # Count total characters
+            total_chars = len(full_doc)
+            print(f"\nTotal number of characters in {lang_name} file:", total_chars)
+
+            return full_doc
+    except FileNotFoundError:
+        print(f"Error: {file_path} not found.")
+        return None
+    except Exception as e:
+        print(f"An error occurred while reading {file_path}: {e}")
+        return None
+```
+
+```python
+# Read English and Hindi documents
+english_doc = read_file("sample1.txt", "English")
+hindi_doc = read_file("sample2.txt", "Hindi")
+```
+
+### **4.2: Split the input text into chunks based on model limits**
+
+For Mayura:v1, the API has a maximum chunk size of 1000 characters per request.
+
+For Sarvam-Translate:v1, the API has a maximum chunk size of 2000 characters per request.
+
+we need to split the text accordingly.
+
+```python
+def chunk_text(text, max_length=2000):
+    """Splits text into chunks of at most max_length characters while preserving word boundaries."""
+    chunks = []
+
+    while len(text) > max_length:
+        split_index = text.rfind(" ", 0, max_length)  # Find the last space within limit
+        if split_index == -1:
+            split_index = max_length  # No space found, force split at max_length
+
+        chunks.append(text[:split_index].strip())  # Trim spaces before adding
+        text = text[split_index:].lstrip()  # Remove leading spaces for the next chunk
+
+    if text:
+        chunks.append(text.strip())  # Add the last chunk
+
+    return chunks
+```
+
+```python
+# Split the text
+english_text_chunks = chunk_text(english_doc)
+
+# Display chunk info
+print(f"Total Chunks: {len(english_text_chunks)}")
+for i, chunk in enumerate(
+    english_text_chunks[:3], 1
+):  # Show only first 3 chunks for preview
+    print(f"\n=== Chunk {i} (Length: {len(chunk)}) ===\n{chunk}")
+```
+
+```python
+# Split the text
+hindi_text_chunks = chunk_text(hindi_doc)
+
+# Display chunk info
+print(f"Total Chunks: {len(hindi_text_chunks)}")
+for i, chunk in enumerate(
+    hindi_text_chunks[:3], 1
+):  # Show only first 3 chunks for preview
+    print(f"\n=== Chunk {i} (Length: {len(chunk)}) ===\n{chunk}")
+```
+
+### **4.3: Sample Hindi to Sanskrit Translation using Sarvam-Translate:v1**
+
+sarvam-translate:v1: Supports all 22 scheduled languages of India, formal mode only.
+
+```python
+# Sample Hindi text (can be up to 2000 characters per chunk for sarvam-translate:v1)
+hindi_text = "भारत एक महान देश है। इसकी संस्कृति बहुत पुरानी और समृद्ध है।"
+
+# Simple chunking for demonstration (no chunk exceeds 2000 characters)
+hindi_text_chunks = [hindi_text]  # In real cases, you would split longer text here
+
+# Loop through each chunk and translate
+for idx, chunk in enumerate(hindi_text_chunks):
+    response = client.text.translate(
+        input=chunk,
+        source_language_code="hi-IN",
+        target_language_code="sa-IN",
+        speaker_gender="Male",
+        mode="formal",
+        model="sarvam-translate:v1",
+    )
+
+    # Print the translated output
+    print(f"Chunk {idx + 1} Translation:\n{response.translated_text}\n")
+```
+
+### **4.4: Setting up the API Endpoint using Sarvam-Translate model**
+
+There are three main types of translations we support:
+
+1️⃣ **English to Indic** 🏛 → Translating from **English to Indian languages** (e.g., _"Invoice total is $3,450.75." → "इनवॉइस कुल राशि $3,450.75 है।"_)
+
+2️⃣ **Indic to English** 🌍 → Converting **Indian languages to English** (e.g., _"आपका ऑर्डर सफलतापूर्वक दर्ज किया गया है।" → "Your order has been successfully placed."_)
+
+3️⃣ **Indic to Indic** 🔄 → Translating **between Indian languages** (e.g., _Hindi → Tamil, Bengali → Marathi_).
+
+```python
+# Initialize SarvamAI
+
+from sarvamai import SarvamAI
+
+client = SarvamAI(api_subscription_key=SARVAM_API_KEY)
+```
+
+### **English to Indic Translation**
+
+```python
+translated_texts = []
+for idx, chunk in enumerate(english_text_chunks):
+    response = client.text.translate(
+        input=chunk,
+        source_language_code="en-IN",
+        target_language_code="sa-IN",
+        speaker_gender="Male",
+        mode="formal",
+        model="sarvam-translate:v1",
+        enable_preprocessing=False,
+    )
+
+    translated_text = response.translated_text
+    print(f"\n=== Translated Chunk {idx + 1} ===\n{translated_text}\n")
+    translated_texts.append(translated_text)
+
+# Combine all translated chunks
+final_translation = "\n".join(translated_texts)
+print("\n=== Final Translated Text in Sanskrit ===")
+print(final_translation)
+```
+
+### **Indic to English Translation**
+
+```python
+translated_texts = []
+for idx, chunk in enumerate(hindi_text_chunks):
+    response = client.text.translate(
+        input=chunk,
+        source_language_code="hi-IN",
+        target_language_code="sd-IN",
+        speaker_gender="Male",
+        mode="formal",
+        model="sarvam-translate:v1",
+        enable_preprocessing=False,
+    )
+
+    translated_text = response.translated_text
+    print(f"\n=== Translated Chunk {idx + 1} ===\n{translated_text}\n")
+    translated_texts.append(translated_text)
+
+# Combine all translated chunks
+final_translation = "\n".join(translated_texts)
+print("\n=== Final Translated Text in Sindhi ===")
+print(final_translation)
+```
+
+### **Indic to Indic Translation**
+
+```python
+translated_texts = []
+for idx, chunk in enumerate(hindi_text_chunks):
+    response = client.text.translate(
+        input=chunk,
+        source_language_code="hi-IN",
+        target_language_code="bn-IN",
+        speaker_gender="Male",
+        mode="formal",
+        model="sarvam-translate:v1",
+        enable_preprocessing=False,
+    )
+
+    translated_text = response.translated_text
+    print(f"\n=== Translated Chunk {idx + 1} ===\n{translated_text}\n")
+    translated_texts.append(translated_text)
+
+# Combine all translated chunks
+final_translation = "\n".join(translated_texts)
+print("\n=== Translated Text Chunks in Bengali ===")
+print(final_translation)
+```
+
+## **5. Advanced Features**
+
+### **5.1: Translation Modes & Differences**
+
+1️⃣ **Formal** – Highly professional, uses **pure Hindi** (e.g., _"कुल राशि", "देय है"_). Suitable for **official documents, legal papers, and corporate communication**.
+
+2️⃣ **Classic-Colloquial** – Balanced mix of **Hindi & English**, slightly informal (e.g., _"कुल जोड़", "देना होगा"_). Ideal for **business emails, customer support, and semi-formal communication**.
+
+3️⃣ **Modern-Colloquial** – **Hinglish, casual, and direct** (e.g., _"Invoice total", "due है", "contact करो"_). Best for **chatbots, social media, and casual conversations**.
+
+**📌 Rule of Thumb:**
+
+- **Use Formal for official content** 🏛
+- **Use Classic-Colloquial for general communication** 💬
+- **Use Modern-Colloquial for everyday conversations** 🚀
+
+```python
+# To highlight the difference between the models lets use the below example.
+full_text = (
+    "The invoice total is $3,450.75, due by 15th March 2025. Contact us at support@example.com for queries. "
+    "Order #987654321 was placed on 02/29/2024. Your tracking ID is TRK12345678."
+)
+```
+
+### **Formal**
+
+Supported by both Mayura:v1 and Sarvam-Translate:v1.
+
+```python
+response = client.text.translate(
+    input=full_text,
+    source_language_code="en-IN",
+    target_language_code="hi-IN",
+    speaker_gender="Male",
+    mode="formal",
+    model="sarvam-translate:v1",
+    enable_preprocessing=False,
+)
+translated_text = response.translated_text
+print("\n=== Translated Text ===\n", translated_text)
+```
+
+### **Classic Colloquial**
+
+Supported only by Mayura:v1 model.
+
+```python
+response = client.text.translate(
+    input=full_text,
+    source_language_code="en-IN",
+    target_language_code="hi-IN",
+    speaker_gender="Male",
+    mode="classic-colloquial",
+    model="mayura:v1",
+    enable_preprocessing=False,
+)
+translated_text = response.translated_text
+print("\n=== Translated Text ===\n", translated_text)
+```
+
+### **Modern Colloquial**
+
+Supported only by Mayura:v1 model.
+
+```python
+response = client.text.translate(
+    input=full_text,
+    source_language_code="en-IN",
+    target_language_code="hi-IN",
+    speaker_gender="Male",
+    mode="modern-colloquial",
+    model="mayura:v1",
+    enable_preprocessing=False,
+)
+translated_text = response.translated_text
+print("\n=== Translated Text ===\n", translated_text)
+```
+
+### **5.2: Speaker Gender**
+
+The translation model supports **Male** and **Female** speaker options, which impact the tone and style of the output.
+
+1️⃣ **Male Voice** 🔵
+
+2️⃣ **Female Voice** 🔴
+
+### **Female**
+
+```python
+response = client.text.translate(
+    input=full_text,
+    source_language_code="en-IN",
+    target_language_code="hi-IN",
+    speaker_gender="Female",
+    mode="formal",
+    model="sarvam-translate:v1",
+    enable_preprocessing=False,
+)
+translated_text = response.translated_text
+print("\n=== Translated Text ===\n", translated_text)
+```
+
+### **Male**
+
+```python
+response = client.text.translate(
+    input=full_text,
+    source_language_code="en-IN",
+    target_language_code="hi-IN",
+    speaker_gender="Male",
+    mode="formal",
+    model="sarvam-translate:v1",
+    enable_preprocessing=False,
+)
+translated_text = response.translated_text
+print("\n=== Translated Text ===\n", translated_text)
+```
+
+### **5.3: Numerals Format Feature**
+
+The `numerals_format` parameter controls how numbers appear in the translation. It has two options:
+
+1️⃣ **International (Default)** 🌍 → Uses standard **0-9** numerals.  
+✅ Example: _"मेरा phone number है: 9840950950."_  
+✅ Best for **universally understood content, technical documents, and modern usage**.
+
+2️⃣ **Native** 🔡 → Uses **language-specific** numerals.  
+✅ Example: _"मेरा phone number है: ९८४०९५०९५०."_  
+✅ Ideal for **traditional texts, cultural adaptation, and regional content**.
+
+**📌 When to Use What?**
+
+- Use **International** for **wider readability and digital content** 📱
+- Use **Native** for **localized, heritage-focused, and print media content** 📖
+
+### **Native**
+
+```python
+response = client.text.translate(
+    input=full_text,
+    source_language_code="en-IN",
+    target_language_code="hi-IN",
+    speaker_gender="Male",
+    mode="formal",
+    model="sarvam-translate:v1",
+    enable_preprocessing=False,
+    numerals_format="native",
+)
+translated_text = response.translated_text
+print("\n=== Translated Text ===\n", translated_text)
+```
+
+### **International**
+
+```python
+response = client.text.translate(
+    input=full_text,
+    source_language_code="en-IN",
+    target_language_code="hi-IN",
+    speaker_gender="Male",
+    mode="formal",
+    model="sarvam-translate:v1",
+    enable_preprocessing=False,
+    numerals_format="international",
+)
+translated_text = response.translated_text
+print("\n=== Translated Text ===\n", translated_text)
+```
+
+### **5.4: Numerals Format Feature**
+
+The `output_script` parameter controls how the translated text is **transliterated**, i.e., how it appears in different scripts while keeping pronunciation intact.
+
+### **Transliteration Options for Mayura:**
+
+1️⃣ **Default (null)** – No transliteration applied.  
+✅ Example: _"आपका Rs. 3000 का EMI pending है।"_  
+✅ Best for **modern, mixed-language content**.
+
+2️⃣ **Roman** – Converts the output into **Romanized Hindi**.  
+✅ Example: _"aapka Rs. 3000 ka EMI pending hai."_  
+✅ Ideal for **users who can speak but not read native scripts**.
+
+3️⃣ **Fully-Native** – Uses **formal native script transliteration**.  
+✅ Example: _"आपका रु. 3000 का ई.एम.ऐ. पेंडिंग है।"_  
+✅ Best for **official documents and structured writing**.
+
+4️⃣ **Spoken-Form-in-Native** – Uses **native script but mimics spoken style**.  
+✅ Example: _"आपका थ्री थाउजेंड रूपीस का ईएमअइ पेंडिंग है।"_  
+✅ Ideal for **voice assistants, conversational AI, and informal speech**.
+
+### **📌 When to Use What?**
+
+- **Default** – For natural, mixed-language modern writing ✍️
+- **Roman** – For users unfamiliar with native scripts 🔤
+- **Fully-Native** – For formal, structured translations 🏛
+- **Spoken-Form-in-Native** – For casual speech and voice applications 🎙
+
+```python
+response = client.text.translate(
+    input=full_text,
+    source_language_code="en-IN",
+    target_language_code="hi-IN",
+    speaker_gender="Male",
+    mode="modern-colloquial",
+    model="mayura:v1",
+    enable_preprocessing=False,
+    output_script="roman",
+    numerals_format="international",
+)
+translated_text = response.translated_text
+print("\n=== Translated Text ===\n", translated_text)
+```
+
+```python
+response = client.text.translate(
+    input=full_text,
+    source_language_code="en-IN",
+    target_language_code="hi-IN",
+    speaker_gender="Male",
+    mode="modern-colloquial",
+    model="mayura:v1",
+    enable_preprocessing=False,
+    output_script="spoken-form-in-native",
+    numerals_format="international",
+)
+translated_text = response.translated_text
+print("\n=== Translated Text ===\n", translated_text)
+```
+
+```python
+response = client.text.translate(
+    input=full_text,
+    source_language_code="en-IN",
+    target_language_code="hi-IN",
+    speaker_gender="Male",
+    mode="modern-colloquial",
+    model="mayura:v1",
+    enable_preprocessing=False,
+    output_script="fully-native",
+    numerals_format="international",
+)
+translated_text = response.translated_text
+print("\n=== Translated Text ===\n", translated_text)
+```
+
+🚫 Note: For sarvam-translate:v1 - Transliteration is not supported
+
+## **6. Error Handling**
+
+You may encounter these errors while using the API:
+
+- **403 Forbidden** (`invalid_api_key_error`)
+
+  - Cause: Invalid API key.
+  - Solution: Use a valid API key from the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/).
+
+- **429 Too Many Requests** (`insufficient_quota_error`)
+
+  - Cause: Exceeded API quota.
+  - Solution: Check your usage, upgrade if needed, or implement exponential backoff when retrying.
+
+- **500 Internal Server Error** (`internal_server_error`)
+
+  - Cause: Issue on our servers.
+  - Solution: Try again later. If persistent, contact support.
+
+- **400 Bad Request** (`invalid_request_error`)
+  - Cause: Incorrect request formatting.
+  - Solution: Verify your request structure and parameters.
+
+## **7. Additional Resources**
+
+For more details, refer to the our official documentation and we are always there to support and help you on our Discord Server:
+
+- **Documentation**: [docs.sarvam.ai](https://docs.sarvam.ai)
+- **Community**: [Join the Discord Community](https://discord.gg/hTuVuPNF)
+
+---
+
+## **8. Final Notes**
+
+- Keep your API key secure.
+- Use clear audio for best results.
+- Explore advanced features like diarization and translation.
+
+**Keep Building!** 🚀
+---
+title: 'Transliterate API : A Hands-on Guide'
+---
+
+## **Overview**
+
+This tutorial demonstrates how to use the **Transliteration API** to convert text from one script to another while preserving pronunciation. It supports multiple Indic languages and offers customizable numeral formatting.
+
+## **1. Installation**
+
+Before you begin, ensure you have the necessary Python libraries installed. Run the following commands to install the required packages:
+
+```python
+!pip install -Uqq sarvamai
+
+```
+
+## **Import Required Libraries**
+
+First, let's import all the necessary libraries.
+
+```python
+from sarvamai import SarvamAI
+```
+
+##  **2. Authentication**
+
+To use the API, you need an API subscription key. Follow these steps to set up your API key:
+
+1. **Obtain your API key**: If you don’t have an API key, sign up on the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/) to get one.
+2. **Replace the placeholder key**: In the code below, replace "YOUR_SARVAM_AI_API_KEY" with your actual API key.
+
+```python
+SARVAM_API_KEY = "YOUR_SARVAM_API_KEY"
+```
+
+## **3. Understanding the Parameters**
+
+🔹 The API takes several key parameters:
+
+✔ **`input`** – The text to be transliterated.  
+✔ **`source_language_code`** – Language of the input text.  
+✔ **`target_language_code`** – Desired transliteration output language.  
+✔ **`numerals_format`** – Choose between **international (0-9)** or **native (१-९)** numbers.  
+✔ **`spoken_form`** – Whether to convert text into a natural spoken format.  
+✔ **`spoken_form_numerals_language`** – Choose whether numbers should be spoken in **English** or **native** language.
+
+🚫 Note: Transliteration between Indic languages (e.g., Hindi → Bengali) is not supported.
+
+## **4. Basic Usage**
+
+### **4.1: Read the Document**
+
+We have two sample documents under the `data` folder:
+
+- [Download sample1.txt](https://github.com/sarvamai/sarvam-ai-cookbook/blob/main/notebooks/transliterate/data/sample1.txt)
+- [Download sample2.txt](https://github.com/sarvamai/sarvam-ai-cookbook/blob/main/notebooks/transliterate/data/sample2.txt)
+
+```python
+def read_file(file_path, lang_name):
+    try:
+        with open(file_path, "r", encoding="utf-8") as file:
+            # Read the first 5 lines
+            lines = [next(file) for _ in range(5)]
+            print(f"=== {lang_name} Text (First Few Lines) ===")
+            print("".join(lines))  # Print first few lines
+
+            # Read the remaining content
+            remaining_text = file.read()
+
+            # Combine all text
+            full_doc = "".join(lines) + remaining_text
+
+            # Count total characters
+            total_chars = len(full_doc)
+            print(f"\nTotal number of characters in {lang_name} file:", total_chars)
+
+            return full_doc
+    except FileNotFoundError:
+        print(f"Error: {file_path} not found.")
+        return None
+    except Exception as e:
+        print(f"An error occurred while reading {file_path}: {e}")
+        return None
+```
+
+```python
+# Read English and Hindi documents
+english_doc = read_file("data/sample1.txt", "English")
+hindi_doc = read_file("data/sample2.txt", "Hindi")
+```
+
+### **4.2: Split the text into chunks of at most 1000 characters**
+
+Since the API has a restriction of 1000 characters per request, we need to split the text accordingly.
+
+```python
+def chunk_text(text, max_length=1000):
+    """Splits text into chunks of at most max_length characters while preserving word boundaries."""
+    chunks = []
+
+    while len(text) > max_length:
+        split_index = text.rfind(" ", 0, max_length)  # Find the last space within limit
+        if split_index == -1:
+            split_index = max_length  # No space found, force split at max_length
+
+        chunks.append(text[:split_index].strip())  # Trim spaces before adding
+        text = text[split_index:].lstrip()  # Remove leading spaces for the next chunk
+
+    if text:
+        chunks.append(text.strip())  # Add the last chunk
+
+    return chunks
+```
+
+```python
+# Split the text
+english_text_chunks = chunk_text(english_doc)
+
+# Display chunk info
+print(f"Total Chunks: {len(english_text_chunks)}")
+for i, chunk in enumerate(
+    english_text_chunks[:3], 1
+):  # Show only first 3 chunks for preview
+    print(f"\n=== Chunk {i} (Length: {len(chunk)}) ===\n{chunk}")
+```
+
+
+```python
+# Split the text
+hindi_text_chunks = chunk_text(english_doc)
+
+# Display chunk info
+print(f"Total Chunks: {len(hindi_text_chunks)}")
+for i, chunk in enumerate(
+    hindi_text_chunks[:3], 1
+):  # Show only first 3 chunks for preview
+    print(f"\n=== Chunk {i} (Length: {len(chunk)}) ===\n{chunk}")
+```
+
+
+### **4.3: Setting up the API Endpoint**
+
+```python
+client = SarvamAI(api_subscription_key=SARVAM_API_KEY)
+```
+
+```python
+# Send requests for each chunk
+translated_texts = []
+for idx, chunk in enumerate(hindi_text_chunks):
+    response = client.text.transliterate(
+        input=chunk,
+        source_language_code="hi-IN",
+        target_language_code="hi-IN",
+        spoken_form=True,
+        numerals_format="international",
+    )
+
+    translated_text = response.transliterated_text
+    translated_texts.append(translated_text)
+
+# Combine all translated chunks
+final_translation = "\n".join(translated_texts)
+print("\n=== Final Translated Text ===")
+print(final_translation)
+```
+
+## **5. Experimenting with Different Options**
+
+We currently have **three different transliteration models**:
+
+### **5.1 Romanization (Indic → Latin Script)**
+
+- Converts Indic scripts to Roman script (English alphabet).
+- Example: `मैं ऑफिस जा रहा हूँ` → `main office ja raha hun`
+- Parameters:
+  - `source_language_code = "hi-IN"`
+  - `target_language_code = "en-IN"`
+
+```python
+response = client.text.transliterate(
+    input="मैं ऑफिस जा रहा हूँ",
+    source_language_code="hi-IN",
+    target_language_code="en-IN",
+    spoken_form=True,
+)
+
+transliterated_text = response.transliterated_text
+print(f"Romanized Text: {transliterated_text}")
+```
+
+    Romanized Text: Main office ja raha hun
+
+### **5.2 Conversion to Indic Scripts**
+
+- Converts text into an Indic script from various sources:
+
+  - **Code-mixed text**
+
+    - Example: `मैं office जा रहा हूँ` → `मैं ऑफिस जा रहा हूँ`
+    - Parameters:
+      - `source_language_code = "hi-IN"`
+      - `target_language_code = "hi-IN"`
+
+  - **Romanized text**
+
+    - Example: `main office ja raha hun` → `मैं ऑफिस जा रहा हूँ`
+    - Parameters:
+      - `source_language_code = "hi-IN"`
+      - `target_language_code = "hi-IN"`
+
+  - **English text**
+    - Example: `I am going to office` → `आइ ऍम गोइंग टू ऑफिस`
+    - Parameters:
+      - `source_language_code = "en-IN"`
+      - `target_language_code = "hi-IN"`
+
+```python
+response = client.text.transliterate(
+    input="main office ja raha hun",
+    source_language_code="hi-IN",
+    target_language_code="hi-IN",
+    spoken_form=True,
+)
+
+transliterated_text = response.transliterated_text
+print(f"Transliterated Text: {transliterated_text}")
+```
+
+    Transliterated Text: मैं ऑफिस जा रहा हूँ
+
+### **5.3 Spoken Indic Form**
+
+- Converts written text into a more natural spoken form.
+- Example: `मुझे कल 9:30am को appointment है` → `मुझे कल सुबह साढ़े नौ बजे अपॉइंटमेंट है`
+
+```python
+response = client.text.transliterate(
+    input="मुझे कल 9:30am को appointment है",
+    source_language_code="hi-IN",
+    target_language_code="hi-IN",
+    spoken_form=True,
+)
+
+transliterated_text = response.transliterated_text
+print(f"Spoken Text: {transliterated_text}")
+```
+
+    Spoken Text: मुझे कल सुबह साढ़े नौ बजे अपॉइंटमेंट है
+
+## **6. Advanced Features**
+
+- **`numerals_format`** – Choose between **international (0-9)** or **native (१-९)** numbers.
+- **`spoken_form_numerals_language`** – Choose whether numbers should be spoken in **English** or the **native language**.
+
+### **Numerals Format**
+
+`numerals_format` is an optional parameter with two options:
+
+- **`international`** (default): Uses regular numerals (0-9).
+- **`native`**: Uses language-specific native numerals.
+
+#### **Example:**
+
+- If `international` format is selected → `मेरा phone number है: 9840950950`.
+- If `native` format is selected → `मेरा phone number है: ९८४०९५०९५०`.
+
+```python
+response = client.text.transliterate(
+    input="मुझे कल 9:30am को appointment है",
+    source_language_code="hi-IN",
+    target_language_code="hi-IN",
+    spoken_form=True,
+    numerals_format="native",
+)
+
+transliterated_text = response.transliterated_text
+print(f"Native Numerals Text: {transliterated_text}")
+```
+
+    Native Numerals Text: मुझे कल सुबह साढ़े नौ बजे अपॉइंटमेंट है
+
+### **Spoken Form Numerals Language**
+
+`spoken_form_numerals_language` is an optional parameter with two options and only works when `spoken_form` is **true**:
+
+- **`english`**: Numbers in the text will be spoken in **English**.
+- **`native (default)`**: Numbers in the text will be spoken in the **native language**.
+
+#### **Example:**
+
+**Input:** `"मेरे पास ₹200 है"`
+
+- If `english` format is selected → `"मेरे पास टू हन्डर्ड रूपीस है"`.
+- If `native` format is selected → `"मेरे पास दो सौ रुपये है"`.
+
+```python
+response = client.text.transliterate(
+    input="मुझे कल 9:30am को appointment है",
+    source_language_code="hi-IN",
+    target_language_code="hi-IN",
+    spoken_form=True,
+    spoken_form_numerals_language="english",
+)
+
+transliterated_text = response.transliterated_text
+print(f"Spoken Form Numerals Language Text: {transliterated_text}")
+```
+
+    Spoken Form Numerals Language Text: मुझे कल नाइन थर्टी ए एम को अपॉइंटमेंट है
+
+## **7. Error Handling**
+
+You may encounter these errors while using the API:
+
+- **403 Forbidden** (`invalid_api_key_error`)
+
+  - Cause: Invalid API key.
+  - Solution: Use a valid API key from the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/).
+
+- **429 Too Many Requests** (`insufficient_quota_error`)
+
+  - Cause: Exceeded API quota.
+  - Solution: Check your usage, upgrade if needed, or implement exponential backoff when retrying.
+
+- **500 Internal Server Error** (`internal_server_error`)
+
+  - Cause: Issue on our servers.
+  - Solution: Try again later. If persistent, contact support.
+
+- **400 Bad Request** (`invalid_request_error`)
+  - Cause: Incorrect request formatting.
+  - Solution: Verify your request structure and parameters.
+
+## **8. Additional Resources**
+
+For more details, refer to the our official documentation and we are always there to support and help you on our Discord Server:
+
+- **Documentation**: [docs.sarvam.ai](https://docs.sarvam.ai)
+- **Community**: [Join the Discord Community](https://discord.gg/hTuVuPNF)
+
+---
+
+## **9. Final Notes**
+
+- Keep your API key secure.
+- Use clear audio for best results.
+- Explore advanced features like diarization and translation.
+
+**Keep Building!** 🚀
+# Text-to-Speech Conversion using Bulbul Model
+
+# Overview
+
+This guide demonstrates how to convert text into speech using the **Sarvam AI Text-to-Speech API**. The resulting audio files are saved as `.wav` files.
+
+## 1.Prerequisites
+
+Before running this, ensure you have:
+
+- Python 3.7 or higher
+- Python packages: `sarvamai`
+
+Install the required package using pip:
+
+```bash
+pip install sarvamai
+```
+
+## 2.Import Required Libraries
+
+```python
+from sarvamai import SarvamAI
+from sarvamai.play import play, save
+```
+
+## 3.Set Up Your API Key
+
+To use the TTS Bulbul API:
+
+1. Sign up at [Sarvam AI Dashboard](https://dashboard.sarvam.ai/) to get your API key.
+2. Replace the placeholder key in the code.
+
+```python
+SARVAM_API_KEY = "YOUR_SARVAM_API_KEY"
+client = SarvamAI(api_subscription_key=SARVAM_API_KEY)
+```
+
+## 4.Example Text Input
+
+```python
+text = """
+Netaji Subhash Marg से Dayanand Road की तरफ, south की तरफ़ जाने से शुरू करें।
+Dayanand Road पर पहुँचने के बाद, बाएँ मुड़ जाएँ। 350 meters तक सीधा चलते रहें।
+आपको बायें तरफ़, United Bank of India ATM दिखेगा।
+Dayanand School के दाएँ तरफ़ से गुजरने के बाद, बाएँ मुड़ें।
+120 meters के बाद, Ghata Masjid Road पर, right turn करें।
+280 meters तक चलते रहें।
+Mahatma Gandhi Marg पे रहें और, 2.9 kilometers तक Old Delhi की तरफ जाएँ।
+फिर, HC Sen Marg पर continue करें, और Paranthe Wali Gali तक drive करें।
+"""
+```
+
+## 5.API Parameters
+
+| Parameter              | Description                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------ |
+| `target_language_code` | Language of the input text (e.g., `hi-IN`)                                                       |
+| `speaker`              | Voice used: Female - `Anushka`, `Manisha`, `Vidya`, `Arya`; Male - `Abhilash`, `Karun`, `Hitesh` |
+| `pitch`                | Pitch adjustment: -0.75 to 0.75 (default: 0.0)                                                   |
+| `pace`                 | Speed control: 0.5 to 2.0 (default: 1.0)                                                         |
+| `loudness`             | Volume: 0.3 to 3.0 (default: 1.0)                                                                |
+| `speech_sample_rate`   | Output sample rate: 8000, 16000, 22050, or 24000 Hz                                              |
+| `enable_preprocessing` | Normalize English/numeric entities (default: false)                                              |
+
+## 6.Convert Text to Speech
+
+```python
+response = client.text_to_speech.convert(
+    text="Your Text",
+    target_language_code="hi-IN",
+    speaker="anushka",
+    enable_preprocessing=True,
+)
+```
+
+## 7. Play or Save Audio
+
+To play the output:
+
+```python
+play(response)
+```
+
+To save the output:
+
+```python
+save(response, "output.wav")
+```
+
+## 8.Output
+
+Running the above code saves a `output.wav` file containing the speech.
+
+## 9.Conclusion
+
+This MDX guide showed how to use **Sarvam AI**'s TTS API to convert Hindi text into lifelike speech. Customize the text, language, voice, and parameters to suit your application.
+
+---
+
+## 10.Additional Resources
+
+- **Documentation**: [docs.sarvam.ai](https://docs.sarvam.ai)
+- **Community Support**: [Join our Discord](https://discord.gg/hTuVuPNF)
+
+> 🛡️ **Note**: Keep your API key safe and avoid committing it in public repositories.
+
+🚀 **Keep Building!**
+
+```
+
+```
+---
+'title:Language Identification API': A Hands-on Guide
+description: >-
+  A step-by-step guide on how to use the Language Identification API to detect
+  the language and script codes.
+---
+
+### **Overview**  
+This notebook demonstrates how to use the **Language Identification API** to detect the language and script codes. We will also explore how language identification can be used in translation and transliteration tasks to automatically detect the source language and perform the appropriate transformations.
+
+
+## **1. Installation**  
+
+Before you begin, ensure you have the necessary Python libraries installed. Run the following commands to install the required packages:
+
+
+```python
+!pip install -Uqq sarvamai
+from sarvamai import SarvamAI
+```
+
+## **2. Authentication**
+
+
+To use the API, you need an API subscription key. Follow these steps to set up your API key:
+
+1. **Obtain your API key**: If you don’t have an API key, sign up on the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/) to get one.
+2. **Replace the placeholder key**: In the code below, replace "YOUR_SARVAM_API_KEY" with your actual API key.
+
+
+```python
+SARVAM_API_KEY = "YOUR_SARVAM_API_KEY"
+```
+
+## **3. Basic Usage**  
+
+The API requires a single input parameter:
+
+| ✅ Parameter | 🔍 Description |
+|-------------|----------------|
+| `input`     | The text for which the language and script codes need to be detected. |
+
+⚠️ **Note:** If the API cannot confidently detect the language or script, it will return `null` for one or both fields.
+
+
+### **Response Parameters**  
+
+- **`language_code`** (String) – The detected language in BCP-47 format.  Supported values:  
+  - `"en-IN"` (English - India)  
+  - `"en-US"` (English - United States)  
+  - `"bn-IN"` (Bengali - India)  
+  - `"gu-IN"` (Gujarati - India)  
+  - `"hi-IN"` (Hindi - India)  
+  - `"kn-IN"` (Kannada - India)  
+  - `"ml-IN"` (Malayalam - India)  
+  - `"mr-IN"` (Marathi - India)  
+  - `"od-IN"` (Odia - India)  
+  - `"pa-IN"` (Punjabi - India)  
+  - `"ta-IN"` (Tamil - India)  
+  - `"te-IN"` (Telugu - India)  
+  - `"ur-IN"` (Urdu - India)  
+
+
+
+
+- **`script_code`** (String) – The detected writing script in ISO-15924 format.Supported values:  
+  - `"Latn"` → Latin (Roman script)  
+  - `"Beng"` → Bengali script  
+  - `"Gujr"` → Gujarati script  
+  - `"Deva"` → Devanagari script  
+  - `"Knda"` → Kannada script  
+  - `"Mlym"` → Malayalam script  
+  - `"Orya"` → Odia script  
+  - `"Guru"` → Gurmukhi (Punjabi) script  
+  - `"Taml"` → Tamil script  
+  - `"Telu"` → Telugu script  
+  - `"Arab"` → Arabic script  
+
+
+## **4. Language Detection Usage**  
+
+**1.Initialize the Client**
+
+
+```python
+client = SarvamAI(api_subscription_key=SARVAM_API_KEY)
+```
+
+**2.Define Input Text**
+
+
+```python
+example_text = "hey, what is your name?"
+```
+
+**3.Detect Language and Script**
+
+
+```python
+response = client.text.identify_language(input=example_text)
+language_code = response.language_code
+script_code = response.script_code
+
+print("\n=== Detection Results ===")
+print(f"Detected Language Code: {language_code}")
+print(f"Detected Script Code: {script_code}\n")
+```
+
+**4.Try Another Input**
+
+
+```python
+example_text = "A'in jun aatinob'aal li maare ink'a' neketaw ru."
+```
+
+
+```python
+response = client.text.identify_language(input=example_text)
+language_code = response.language_code
+script_code = response.script_code
+
+print("\n=== Detection Results ===")
+print(f"Detected Language Code: {language_code}")
+print(f"Detected Script Code: {script_code}\n")
+```
+
+## **5. Auto Detection**  
+
+
+To enable automatic language detection, pass `"auto"` as the `source_language_code`. 
+
+The API will return the transliterated/translated text along with the detected source language code.  
+
+🚫 **Note:** In case of detection failure, manually specify the `source_language_code` with one of the supported language codes.  
+
+
+If the API is unable to detect the language, the response will include an error message:
+
+```json
+{
+    "error": {
+        "message": "Unable to detect the language of the input text. Please explicitly pass the `source_language_code` parameter with a supported language.",
+        "code": "unprocessable_entity_error"
+    }
+}
+```
+
+### Auto Detection in Transliterate
+
+
+```python
+response = client.text.transliterate(
+    input="मुझे कल 9:30am को appointment है",
+    source_language_code="auto",
+    target_language_code="hi-IN",
+    spoken_form=True,
+)
+transliterated_text = response.transliterated_text
+source_language_code = response.source_language_code
+
+print(f"✅ Transliteration Successful!\n🔤 Transliterated Text: {transliterated_text}")
+print(f"🌍 Detected Source Language: {source_language_code}")
+```
+
+
+```python
+response = client.text.transliterate(
+    input="'আমার কাল সকাল ৭টায় ডাক্তার এর অ্যাপয়েন্টমেন্ট আছে",
+    source_language_code="auto",
+    target_language_code="en-IN",
+    spoken_form=True,
+)
+transliterated_text = response.transliterated_text
+source_language_code = response.source_language_code
+
+print(f"✅ Transliteration Successful!\n🔤 Transliterated Text: {transliterated_text}")
+print(f"🌍 Detected Source Language: {source_language_code}")
+```
+
+### Auto Detection in Translate
+
+
+```python
+response = client.text.translate(
+    source_language_code="auto",
+    target_language_code="bn-IN",
+    speaker_gender="Male",
+    mode="classic-colloquial",
+    model="mayura:v1",
+    input="मुझे कल 9:30am को appointment है",
+)
+
+translated_text = response.translated_text
+source_language_code = response.source_language_code
+
+
+print(
+    f"✅ Translation Successful!\n🌍 Detected Source Language: {source_language_code}"
+)
+print(f"📝 Translated Text: {translated_text}")
+```
+
+## **6. Error Handling**  
+
+You may encounter these errors while using the API:  
+
+- **403 Forbidden** (`invalid_api_key_error`)  
+  - Cause: Invalid API key.  
+  - Solution: Use a valid API key from the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/).  
+
+- **429 Too Many Requests** (`insufficient_quota_error`)  
+  - Cause: Exceeded API quota.  
+  - Solution: Check your usage, upgrade if needed, or implement exponential backoff when retrying.  
+
+- **500 Internal Server Error** (`internal_server_error`)  
+  - Cause: Issue on our servers.  
+  - Solution: Try again later. If persistent, contact support.  
+
+- **400 Bad Request** (`invalid_request_error`)  
+  - Cause: Incorrect request formatting.  
+  - Solution: Verify your request structure, and parameters.  
+
+- **422 Unprocessable Entity Request** (`unprocessable_entity_error`)  
+  - Cause: Unable to detect the language of the input text.
+  - Solution: Explicitly pass the source_language_code parameter with a supported language.
+
+
+
+## **7. Additional Resources**
+
+For more details, refer to the our official documentation and we are always there to support and help you on our Discord Server:
+
+- **Documentation**: [docs.sarvam.ai](https://docs.sarvam.ai)  
+- **Community**: [Join the Discord Community](https://discord.gg/hTuVuPNF)
+
+
+## **8. Final Notes**
+
+- Keep your API key secure.
+- Use clear audio for best results.
+- Explore advanced features like diarization and translation.
+
+**Keep Building!** 🚀
+
+
+---
+title: Chat Completion API Using Sarvam Model
+description: >-
+  A step-by-step guide on how to use the Chat Completion API for generating text
+  completions using Sarvam
+---
+
+## **Overview**
+
+This notebook demonstrates how to use the **Sarvam Chat Completion API** to generate context-aware conversational responses. We will explore how to send messages, customize parameters like temperature and reasoning effort, and handle multi-turn conversations to build intelligent chat applications.
+
+## **1. Installation**
+
+Before you begin, ensure you have the necessary Python libraries installed. Run the following command in your terminal:
+
+
+```python
+!pip install -Uqq sarvamai
+from sarvamai import SarvamAI
+```
+
+## **2. Set Up the API Endpoint and Payload**
+
+To use the Sarvam API, you need an API key. Follow these steps to set up your API key:
+
+1. **Obtain your API key**: If you don't have an API key, sign up on the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/) to get one.  
+2. **Replace the placeholder key**: In the code below, replace `"YOUR_API_KEY_HERE"` with your actual API key.
+
+
+
+```python
+SARVAM_API_KEY = "YOUR_API_KEY_HERE"
+```
+
+### **2.1 Initialize the Client**
+
+Create a Sarvam client instance using your API key. This client will be used to interact with the Chat Completion API.
+
+
+```python
+client = SarvamAI(api_subscription_key=SARVAM_API_KEY)
+```
+
+## **3. Making the API Request**
+
+### **3.1 Define Your Chat Messages**
+
+The `messages` parameter you send to the `chat.completions()` method must be a list of message objects, each with a `role` and `content`. 
+
+The **role** defines who is "speaking" at each turn of the conversation. There are three possible roles:
+
+#### 1. `"system"` (Optional, but Recommended)
+
+- Used to set the behavior, tone, or instructions for the assistant.
+
+#### 2. `"user"` (Required)
+
+- Represents what the user asks or says.
+- You can have one or more user messages, especially in a multi-turn conversation.
+
+#### 3. `"assistant"` (Optional, only for context in multi-turn)
+- Represents what the assistant previously said.
+- Used when maintaining context in multi-turn conversations.
+
+
+```python
+messages = [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "What is the capital of India?"},
+]
+
+```
+
+### **3.2 Send the Request and Display the Response**
+
+Use the SDK's `chat.completions()` method to send your messages and receive the assistant's reply.
+
+
+
+```python
+response = client.chat.completions(
+    messages=messages,
+)
+
+# Extract and print the assistant's reply
+reply = response.choices[0].message.content
+print("Response:", reply)
+
+```
+
+## **4. Essential Parameters**
+
+| Parameter      | Type           | Required | Default | Description                                                        |
+|----------------|----------------|----------|---------|--------------------------------------------------------------------|
+| `model`        | string (enum)  | Yes      | —       | Model ID to use, e.g., `sarvam-m`.                                |
+| `messages`     | list of objects| Yes      | —       | Conversation messages with roles (`system`, `user`, `assistant`). |
+| `temperature`  | float          | No       | 0.2     | Controls randomness (0 to 2). Higher = more random output.        |
+| `top_p`        | float          | No       | 1       | Nucleus sampling (0 to 1). Alternative to `temperature`.          |
+| `reasoning_effort` | enum        | No       | —       | Depth of reasoning: `low`, `medium`, `high`.                      |                              |
+| `wiki_grounding` | boolean      | No       | false   | Enables retrieval from Wikipedia for factual answers.             |
+
+---
+
+## Key Considerations
+
+- **Maximum context length:** 4096 or 8192 tokens (depending on model).
+- **Temperature range:** 0 to 2  
+  - *Non-thinking mode:* 0.2 (recommended for straightforward responses)  
+  - *Thinking mode:* 0.5 or higher (recommended for deeper reasoning)  
+- **Top-p range:** 0 to 1 (use either `temperature` or `top_p`, not both).
+- **Reasoning effort:** Setting any value enables thinking mode. Higher values increase reasoning depth.
+- **Enable `wiki_grounding` for factual queries** requiring Wikipedia-based references.
+
+
+
+## **5. Example Codes**
+### **5.1: Basic Chat Completion**
+
+This example demonstrates a simple single-turn chat completion where the user asks a question and the model responds.
+
+
+
+```python
+from sarvamai import SarvamAI
+
+client = SarvamAI(
+    api_subscription_key="YOUR_SARVAM_API_KEY",
+)
+response = client.chat.completions(messages=[
+    {"role": "user", "content": "Hey, what is the capital of India?"}
+])
+print(response)
+
+```
+
+### **5.2: Multi-turn Conversation**
+This example shows how to maintain context by including previous messages in a multi-turn conversation.
+
+
+```python
+from sarvamai import SarvamAI
+
+client = SarvamAI(api_subscription_key="YOUR_SARVAM_API_KEY")
+
+response = client.chat.completions(
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Tell me about Indian classical music."},
+        {"role": "assistant", "content": "Indian classical music is one of the oldest musical traditions in the world..."},
+        {"role": "user", "content": "What are the two main styles?"}
+    ],
+    temperature=0.7,
+    reasoning_effort="high"
+)
+print(response.choices[0].message.content)
+
+```
+
+### **5.3: Wikipedia Grounded Query**
+This example demonstrates enabling wiki grounding to fetch fact-based answers using Wikipedia references.
+
+
+```python
+from sarvamai import SarvamAI
+
+client = SarvamAI(api_subscription_key="YOUR_SARVAM_API_KEY")
+
+response = client.chat.completions(
+    messages=[
+        {"role": "user", "content": "What is the history of the Taj Mahal?"}
+    ],
+    temperature=0.2,
+    top_p=1,
+    wiki_grounding=True
+)
+print(response.choices[0].message.content)
+
+```
+
+## **6. Error Handling**  
+
+You may encounter these errors while using the API:  
+
+- **403 Forbidden** (`invalid_api_key_error`)  
+  - Cause: Invalid API key.  
+  - Solution: Use a valid API key from the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/).  
+
+- **429 Too Many Requests** (`insufficient_quota_error`)  
+  - Cause: Exceeded API quota.  
+  - Solution: Check your usage, upgrade if needed, or implement exponential backoff when retrying.  
+
+- **500 Internal Server Error** (`internal_server_error`)  
+  - Cause: Issue on our servers.  
+  - Solution: Try again later. If persistent, contact support.  
+
+- **400 Bad Request** (`invalid_request_error`)  
+  - Cause: Incorrect request formatting.  
+  - Solution: Verify your request structure, and parameters.  
+
+- **422 Unprocessable Entity Request** (`unprocessable_entity_error`)  
+  - Cause: Unable to detect the language of the input text.
+  - Solution: Explicitly pass the source_language_code parameter with a supported language.
+
+
+
+## **7. Additional Resources**
+
+For more details, refer to the our official documentation and we are always there to support and help you on our Discord Server:
+
+- **Documentation**: [docs.sarvam.ai](https://docs.sarvam.ai)  
+- **Community**: [Join the Discord Community](https://discord.gg/hTuVuPNF)
+
+
+## **8. Final Notes**
+
+- Keep your API key secure.
+- Use clear audio for best results.
+- Explore advanced features like diarization and translation.
+
+**Keep Building!** 🚀
+
+
+
+
+
+---
+title: Chat Completion API Using Sarvam Model
+description: >-
+  A step-by-step guide on how to use the Chat Completion API for generating text
+  completions using Sarvam
+---
+
+## **Overview**
+
+This notebook demonstrates how to use the **Sarvam Chat Completion API** to generate context-aware conversational responses. We will explore how to send messages, customize parameters like temperature and reasoning effort, and handle multi-turn conversations to build intelligent chat applications.
+
+## **1. Installation**
+
+Before you begin, ensure you have the necessary Python libraries installed. Run the following command in your terminal:
+
+
+```python
+!pip install -Uqq sarvamai
+from sarvamai import SarvamAI
+```
+
+## **2. Set Up the API Endpoint and Payload**
+
+To use the Sarvam API, you need an API key. Follow these steps to set up your API key:
+
+1. **Obtain your API key**: If you don't have an API key, sign up on the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/) to get one.  
+2. **Replace the placeholder key**: In the code below, replace `"YOUR_API_KEY_HERE"` with your actual API key.
+
+
+
+```python
+SARVAM_API_KEY = "YOUR_API_KEY_HERE"
+```
+
+### **2.1 Initialize the Client**
+
+Create a Sarvam client instance using your API key. This client will be used to interact with the Chat Completion API.
+
+
+```python
+client = SarvamAI(api_subscription_key=SARVAM_API_KEY)
+```
+
+## **3. Making the API Request**
+
+### **3.1 Define Your Chat Messages**
+
+The `messages` parameter you send to the `chat.completions()` method must be a list of message objects, each with a `role` and `content`. 
+
+The **role** defines who is "speaking" at each turn of the conversation. There are three possible roles:
+
+#### 1. `"system"` (Optional, but Recommended)
+
+- Used to set the behavior, tone, or instructions for the assistant.
+
+#### 2. `"user"` (Required)
+
+- Represents what the user asks or says.
+- You can have one or more user messages, especially in a multi-turn conversation.
+
+#### 3. `"assistant"` (Optional, only for context in multi-turn)
+- Represents what the assistant previously said.
+- Used when maintaining context in multi-turn conversations.
+
+
+```python
+messages = [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "What is the capital of India?"},
+]
+
+```
+
+### **3.2 Send the Request and Display the Response**
+
+Use the SDK's `chat.completions()` method to send your messages and receive the assistant's reply.
+
+
+
+```python
+response = client.chat.completions(
+    messages=messages,
+)
+
+# Extract and print the assistant's reply
+reply = response.choices[0].message.content
+print("Response:", reply)
+
+```
+
+## **4. Essential Parameters**
+
+| Parameter      | Type           | Required | Default | Description                                                        |
+|----------------|----------------|----------|---------|--------------------------------------------------------------------|
+| `model`        | string (enum)  | Yes      | —       | Model ID to use, e.g., `sarvam-m`.                                |
+| `messages`     | list of objects| Yes      | —       | Conversation messages with roles (`system`, `user`, `assistant`). |
+| `temperature`  | float          | No       | 0.2     | Controls randomness (0 to 2). Higher = more random output.        |
+| `top_p`        | float          | No       | 1       | Nucleus sampling (0 to 1). Alternative to `temperature`.          |
+| `reasoning_effort` | enum        | No       | —       | Depth of reasoning: `low`, `medium`, `high`.                      |                              |
+| `wiki_grounding` | boolean      | No       | false   | Enables retrieval from Wikipedia for factual answers.             |
+
+---
+
+## Key Considerations
+
+- **Maximum context length:** 4096 or 8192 tokens (depending on model).
+- **Temperature range:** 0 to 2  
+  - *Non-thinking mode:* 0.2 (recommended for straightforward responses)  
+  - *Thinking mode:* 0.5 or higher (recommended for deeper reasoning)  
+- **Top-p range:** 0 to 1 (use either `temperature` or `top_p`, not both).
+- **Reasoning effort:** Setting any value enables thinking mode. Higher values increase reasoning depth.
+- **Enable `wiki_grounding` for factual queries** requiring Wikipedia-based references.
+
+
+
+## **5. Example Codes**
+### **5.1: Basic Chat Completion**
+
+This example demonstrates a simple single-turn chat completion where the user asks a question and the model responds.
+
+
+
+```python
+from sarvamai import SarvamAI
+
+client = SarvamAI(
+    api_subscription_key="YOUR_SARVAM_API_KEY",
+)
+response = client.chat.completions(messages=[
+    {"role": "user", "content": "Hey, what is the capital of India?"}
+])
+print(response)
+
+```
+
+### **5.2: Multi-turn Conversation**
+This example shows how to maintain context by including previous messages in a multi-turn conversation.
+
+
+```python
+from sarvamai import SarvamAI
+
+client = SarvamAI(api_subscription_key="YOUR_SARVAM_API_KEY")
+
+response = client.chat.completions(
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Tell me about Indian classical music."},
+        {"role": "assistant", "content": "Indian classical music is one of the oldest musical traditions in the world..."},
+        {"role": "user", "content": "What are the two main styles?"}
+    ],
+    temperature=0.7,
+    reasoning_effort="high"
+)
+print(response.choices[0].message.content)
+
+```
+
+### **5.3: Wikipedia Grounded Query**
+This example demonstrates enabling wiki grounding to fetch fact-based answers using Wikipedia references.
+
+
+```python
+from sarvamai import SarvamAI
+
+client = SarvamAI(api_subscription_key="YOUR_SARVAM_API_KEY")
+
+response = client.chat.completions(
+    messages=[
+        {"role": "user", "content": "What is the history of the Taj Mahal?"}
+    ],
+    temperature=0.2,
+    top_p=1,
+    wiki_grounding=True
+)
+print(response.choices[0].message.content)
+
+```
+
+## **6. Error Handling**  
+
+You may encounter these errors while using the API:  
+
+- **403 Forbidden** (`invalid_api_key_error`)  
+  - Cause: Invalid API key.  
+  - Solution: Use a valid API key from the [Sarvam AI Dashboard](https://dashboard.sarvam.ai/).  
+
+- **429 Too Many Requests** (`insufficient_quota_error`)  
+  - Cause: Exceeded API quota.  
+  - Solution: Check your usage, upgrade if needed, or implement exponential backoff when retrying.  
+
+- **500 Internal Server Error** (`internal_server_error`)  
+  - Cause: Issue on our servers.  
+  - Solution: Try again later. If persistent, contact support.  
+
+- **400 Bad Request** (`invalid_request_error`)  
+  - Cause: Incorrect request formatting.  
+  - Solution: Verify your request structure, and parameters.  
+
+- **422 Unprocessable Entity Request** (`unprocessable_entity_error`)  
+  - Cause: Unable to detect the language of the input text.
+  - Solution: Explicitly pass the source_language_code parameter with a supported language.
+
+
+
+## **7. Additional Resources**
+
+For more details, refer to the our official documentation and we are always there to support and help you on our Discord Server:
+
+- **Documentation**: [docs.sarvam.ai](https://docs.sarvam.ai)  
+- **Community**: [Join the Discord Community](https://discord.gg/hTuVuPNF)
+
+
+## **8. Final Notes**
+
+- Keep your API key secure.
+- Use clear audio for best results.
+- Explore advanced features like diarization and translation.
+
+**Keep Building!** 🚀
+
+
