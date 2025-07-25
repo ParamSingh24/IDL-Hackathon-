@@ -1,0 +1,9 @@
+Flask
+Flask-Cors
+sarvamai
+requests
+SpeechRecognition
+pyaudio
+numpy==1.26.4
+scipy
+sounddevice
