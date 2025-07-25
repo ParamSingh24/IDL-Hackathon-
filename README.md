@@ -31,7 +31,7 @@ A web application for debate enthusiasts of all skill levels, leveraging AI to s
 ## Supported Debate Formats
 - **British Parliamentary (BP):** Four teams, eight speakers, complex real-time flow.
 - **Asian Parliamentary (AP):** Two teams, beginner-friendly.
-- **World Schools Debating Championship (WSDC):** 3v3, ideal for school/college.
+
 
 ## User Journey
 1. **Sign Up/Login:** Secure authentication (Firebase).
