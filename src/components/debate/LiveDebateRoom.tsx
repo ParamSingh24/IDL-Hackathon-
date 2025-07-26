@@ -37,27 +37,53 @@ interface SpeakerAvatarProps {
 const SpeakerAvatar = ({ speaker, isUser }: SpeakerAvatarProps) => (
   <div className="flex flex-col items-center gap-3 text-center w-40">
     <div
-      className={`relative rounded-full border-4 p-1.5 transition-all duration-300 ${
+      className={`relative rounded-full p-1.5 transition-all duration-300 ${
         speaker.isSpeaking
-          ? "border-green-400 shadow-[0_0_25px_rgba(52,211,73,0.6)]"
-          : "border-gray-600/70"
+          ? "border-4 border-green-400 shadow-[0_0_25px_rgba(52,211,73,0.6)]"
+          : "border-4 border-gray-600/70"
       }`}
     >
-      {/* Placeholder for video feed */}
-      <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gray-900 flex items-center justify-center overflow-hidden">
+      {/* Video feed container */}
+      <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gray-900 flex items-center justify-center overflow-hidden">
         <Avatar className="w-full h-full">
-          <AvatarImage src={speaker.avatarUrl} alt={speaker.name} className="object-cover" />
-          <AvatarFallback className="text-4xl bg-gray-700">{speaker.name[0]}</AvatarFallback>
+          <AvatarImage 
+            src={speaker.avatarUrl} 
+            alt={speaker.name} 
+            className="object-cover w-full h-full"
+            onError={(e) => {
+              // Fallback to default avatar if image fails to load
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+          <AvatarFallback className="text-4xl bg-gray-700 text-white w-full h-full flex items-center justify-center">
+            {speaker.name.charAt(0).toUpperCase()}
+          </AvatarFallback>
         </Avatar>
       </div>
+      
       {/* Speaking/Mute Indicator */}
-      <span
-        className={`absolute -bottom-2 -right-2 w-10 h-10 flex items-center justify-center rounded-full border-4 border-[#0B1426] ${
-          speaker.isSpeaking ? "bg-green-500 animate-pulse" : "bg-gray-700"
+      <div
+        className={`absolute -bottom-2 -right-2 w-10 h-10 flex items-center justify-center rounded-full border-4 border-background transition-colors ${
+          speaker.isSpeaking 
+            ? "bg-green-500 animate-pulse" 
+            : "bg-gray-700"
         }`}
+        aria-label={speaker.isSpeaking ? "Speaking" : "Muted"}
       >
-        {speaker.isSpeaking ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5 text-gray-400" />}
-      </span>
+        {speaker.isSpeaking ? (
+          <Mic className="w-5 h-5 text-white" />
+        ) : (
+          <MicOff className="w-5 h-5 text-gray-300" />
+        )}
+      </div>
+      
+      {/* User indicator */}
+      {isUser && (
+        <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+          <span className="text-xs font-bold text-white">YOU</span>
+        </div>
+      )}
     </div>
     <div>
       <div className="text-lg font-bold text-white">{speaker.name}</div>
@@ -834,56 +860,60 @@ export function LiveDebateRoom() {
 
           {/* --- MODE-SPECIFIC UI: LEARNING MODE --- */}
           {debateConfig.mode === 'learning' && (
-            <section className="flex flex-col items-center justify-center min-h-[300px] p-6 bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-lg border border-purple-500/30">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-white mb-3">Voice Assistant</h3>
-                <p className="text-purple-200 mb-6">Click the button below to speak with the AI assistant</p>
-                
-                {/* Voice Input Button */}
-                <button
-                  onClick={toggleListening}
-                  className={`relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    isListening 
-                      ? 'bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.5)]' 
-                      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg'
-                  }`}
-                  disabled={isSpeaking}
-                >
-                  {isListening ? (
-                    <div className="flex flex-col items-center">
-                      <div className="w-3 h-3 bg-white rounded-full mb-1 animate-pulse"></div>
-                      <span className="text-white text-sm">Listening...</span>
+            <section className="w-full flex justify-center">
+              <div className="w-full max-w-2xl flex flex-col items-center justify-center min-h-[300px] p-6 bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-lg border border-purple-500/30">
+                <div className="text-center w-full">
+                  <h3 className="text-2xl font-bold text-white mb-3">Voice Assistant</h3>
+                  <p className="text-purple-200 mb-6">Click the button below to speak with the AI assistant</p>
+                  
+                  {/* Voice Input Button */}
+                  <div className="flex justify-center">
+                    <button
+                      onClick={toggleListening}
+                      className={`relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 ${
+                        isListening 
+                          ? 'bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.5)]' 
+                          : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg'
+                      }`}
+                      disabled={isSpeaking}
+                    >
+                      {isListening ? (
+                        <div className="flex flex-col items-center">
+                          <div className="w-3 h-3 bg-white rounded-full mb-1 animate-pulse"></div>
+                          <span className="text-white text-sm">Listening...</span>
+                        </div>
+                      ) : (
+                        <Mic className="w-8 h-8 text-white" />
+                      )}
+                    </button>
+                  </div>
+                  
+                  {/* User Input Display */}
+                  {userInput && (
+                    <div className="mt-6 w-full bg-purple-900/30 rounded-lg p-4 border border-purple-500/30">
+                      <p className="text-purple-200 text-sm font-medium mb-1">You said:</p>
+                      <p className="text-white">{userInput}</p>
                     </div>
-                  ) : (
-                    <Mic className="w-8 h-8 text-white" />
                   )}
-                </button>
-                
-                {/* User Input Display */}
-                {userInput && (
-                  <div className="mt-6 w-full max-w-2xl bg-purple-900/30 rounded-lg p-4 border border-purple-500/30">
-                    <p className="text-purple-200 text-sm font-medium mb-1">You said:</p>
-                    <p className="text-white">{userInput}</p>
-                  </div>
-                )}
-                
-                {/* Bot Response */}
-                {botResponse && (
-                  <div className="mt-4 w-full max-w-2xl bg-blue-900/30 rounded-lg p-4 border border-blue-500/30">
-                    <div className="flex justify-between items-center mb-1">
-                      <p className="text-blue-200 text-sm font-medium">Assistant:</p>
-                      {isSpeaking ? (
-                        <button 
-                          onClick={stopSpeaking}
-                          className="text-blue-300 hover:text-white text-xs flex items-center gap-1"
-                        >
-                          <PauseCircle className="w-4 h-4" /> Stop
-                        </button>
-                      ) : null}
+                  
+                  {/* Bot Response */}
+                  {botResponse && (
+                    <div className="mt-4 w-full bg-blue-900/30 rounded-lg p-4 border border-blue-500/30">
+                      <div className="flex justify-between items-center mb-1">
+                        <p className="text-blue-200 text-sm font-medium">Assistant:</p>
+                        {isSpeaking ? (
+                          <button 
+                            onClick={stopSpeaking}
+                            className="text-blue-300 hover:text-white text-xs flex items-center gap-1"
+                          >
+                            <PauseCircle className="w-4 h-4" /> Stop
+                          </button>
+                        ) : null}
+                      </div>
+                      <p className="text-white">{botResponse}</p>
                     </div>
-                    <p className="text-white">{botResponse}</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </section>
           )}
