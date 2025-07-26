@@ -1,103 +1,116 @@
 # AI-Powered Debate Practice Platform
 
-**Repository:** https://github.com/ParamSingh24/IDL-Hackathon-
-**Live Demo:** https://techheroesidlhackathondebatepro
+**Repository:** [GitHub Repo](https://github.com/ParamSingh24/IDL-Hackathon-)  
+**Live Demo:** [https://techheroesidlhackathondebatepro.vercel.app](https://techheroesidlhackathondebatepro.vercel.app)
 
-## Project Overview
-A web application for debate enthusiasts of all skill levels, leveraging AI to simulate realistic debate rounds, provide instant feedback, and support multiple debate formats. The platform makes high-quality debate training accessible, interactive, and engaging.
+## 🚀 Overview
 
-## Key Features
-- **Multi-Mode Debate Practice:**
-  - *Practice Mode*: Step-by-step AI coaching and live guidance.
-  - *Challenge Mode*: Simulated live rounds against AI with scoring.
-  - *Learning Mode*: Focused skill drills (e.g., rebuttal, POI response).
-  - *Quick Debate*: One-click rapid debates.
-- **Comprehensive AI Integration:**
-  - *Debate AI*: Sparring partner/judge, structured speeches, real-time POIs.
-  - *Chatbot AI*: On-demand rules, format help, and debate tips.
-  - *Live Feedback*: Instant, judge-style feedback, clash breakdowns, fallacy detection.
-- **User Customization:**
-  - Choose topic, skill level, mode, and format (BP, AP, WSDC) for a personalized experience.
-- **Gamification & Progression:**
-  - Badges, points, leaderboards, practice streaks, and level advancement.
-- **Results & Analytics:**
-  - Detailed reports, performance analytics, and secure progress tracking.
-- **Language & Accessibility:**
-  - Instant website translation (Google Translate).
-  - Voice navigation and read-aloud for accessibility.
-- **Firebase Integration:**
-  - User authentication, real-time session storage, and progress backup.
+This web app empowers debate lovers at all levels to simulate and practice debates with AI opponents, receive instant judge-grade feedback, and grow through gamified, accessible learning. The platform features multiple debate formats and modes, plus cutting-edge AI for debate generation, analysis, and interactive learning.
 
-## Supported Debate Formats
-- **British Parliamentary (BP):** Four teams, eight speakers, complex real-time flow.
-- **Asian Parliamentary (AP):** Two teams, beginner-friendly.
+## 🌟 Key Features
 
+- **Multi-Mode Debate Practice**
+  - **Practice Mode**: Step-by-step AI coaching and live hints to build core skills.
+  - **Challenge Mode**: Compete against an advanced AI debater; full round, scoring, and realistic POIs.
+  - **Learning Mode**: Focused drills for specific skills (e.g., rebuttals, POI handling, speech structure).
+  - **Quick Debate**: Start instant debates for fast, casual practice.
+- **Comprehensive AI Integration**
+  - **Debate AI**: Acts as your sparring partner or judge, generates structured speeches, raises/answers POIs.
+  - **Chatbot AI**: 24/7 debate help for rules, formats, or instant tips.
+  - **Live Feedback**: Immediate, judge-style feedback and breakdowns after each speech.
+- **User Customization**
+  - Choose your debate topic, skill level, preferred mode, and format (BP, AP, WSDC) each session.
+- **Gamification & Progression**
+  - Earn badges, points, practice streaks, and move up leaderboards as you improve.
+- **Debate Results & Analytics**
+  - Post-session reports show strengths, improvement areas, “manner, matter, method” scores, and skill trends.
+- **Website Translation & Accessibility**
+  - Instant UI translation (via Google Translate) for any language.
+  - Voice navigation and read-aloud for a hands-free, accessible experience.
+- **Firebase Integration**
+  - Secure user authentication, real-time session backup, and personal history tracking.
 
-## User Journey
-1. **Sign Up/Login:** Secure authentication (Firebase).
-2. **Set Preferences:** Choose format, mode, skill, and language.
-3. **Debate Session:** Participate in structured rounds with AI.
-4. **Receive Feedback:** Immediate, actionable feedback after each speech/session.
-5. **Track Progress:** Analyze results and review suggestions.
-6. **Community & Support:** Integrated chatbot, multi-language, and voice features.
+## 🏛️ Supported Debate Formats
 
-## Accessibility & User Experience
-- Fully responsive (web/mobile/tablet).
-- Simple, intuitive UI.
-- Real-time translation and speech features for global and accessible use.
+- **British Parliamentary (BP)**: Four teams, eight speakers, detailed roles and turns.
+- **Asian Parliamentary (AP)**: Simplified team structure for beginner-friendly practice.
+- **World Schools Debating Championship (WSDC):** 3v3 format, highly relevant for school/college tournaments.
 
-## Technical Stack
-- **Frontend:** React/Next.js
-- **Backend:** Node.js/FastAPI
-- **Database:** Firebase
-- **AI/ML:** Sarvam AI APIs (STT, TTS, chat, translation)
-- **Analytics:** Real-time and historical visualization
-- **Deployment:** Vercel/Netlify
+## 👣 User Journey & How to Use
 
-## Hackathon Alignment
-- **Educational Value:** Learning progression, multi-level feedback, accurate simulation.
-- **Gamification:** Points, achievements, visible progression.
-- **User Experience:** Accessible, easy, supports all major formats/languages.
-- **Technical Implementation:** Robust AI integration, scalable, secure.
-- **Scalability & Adaptability:** Expandable for new formats, languages, and users.
+1. **Sign Up/Login**  
+   Secure your profile via Firebase authentication.
 
-## Project Process & Learnings
-- **Ideation & Planning:** Vision for accessible, AI-powered debate for all levels.
-- **Tech Stack Setup:** React/Next.js, Node.js/FastAPI, Firebase, Sarvam AI, Google Translate.
-- **Core Feature Development:** Debate room UI, Sarvam AI APIs, Chatbot AI, analytics, gamification, translation, and voice navigation.
-- **Testing & Deployment:** Real-time transcription, feedback, accessibility, bug fixes, and public deployment.
-- **Key Learnings:**
-  - Switched to streaming audio for fast STT.
-  - Dynamic language switching and robust code-mixed input.
-  - Preloaded TTS for natural feedback.
-  - Moved API keys to backend for security.
+2. **Set Your Preferences**  
+   Select your debate format (BP, AP, WSDC), practice mode, topic, language, and skill level.
 
-## Local Setup
-**Prerequisites:** Node.js, npm, Firebase account, Sarvam AI API key, modern browser.
+3. **Start a Debate Session**  
+   - Enter the Debate Room: Engage with your AI opponent(s) according to chosen mode.
+   - Use **Voice Navigation**: Activate hands-free navigation or command "read aloud" for any interface text or AI feedback.
+   - Try the **Functions Chatbot**: Open the chat panel for instant tips, rules, or format clarifications while you debate or prepare.
 
-1. **Clone the Repository:**
+4. **Debate, Practice, and Receive Feedback**
+   - **Practice Mode**: Get guided prompts and supportive feedback at each step.
+   - **Challenge Mode**: Debate the AI like a tournament round—AI delivers speeches, POIs, and after-speech judge feedback.
+   - **Learning Mode**: Drill targeted debate skills; receive skill-specific tips after each exercise.
+   - **Quick Debate**: One-click start for rapid sessions with concise feedback.
+
+5. **Experience Additional Features**
+   - **Backup Voice / Read Aloud**: All debate content and AI-generated analysis can be read aloud for accessibility (click voice/read button on any text block or feedback panel).
+   - **Debate Analysis**: Immediate, judge-style feedback available after every speech and round.
+   - **Results & Analytics**: View detailed analysis in your dashboard—track progress by skill, badge achievements, and debate history.
+
+6. **Language Support**
+   - Instantly translate the website into any language via the Google Translate option in the header for a fully localized experience.
+
+7. **Logout / Session Backup**
+   - All progress, history, and results are saved to your Firebase account.
+
+## 🛠️ Local Setup (Quickstart)
+
+**Prerequisites**: Node.js & npm, Firebase account, Sarvam AI API key, modern browser.
+
+1. **Clone the Repo**  
    ```bash
    git clone https://github.com/ParamSingh24/IDL-Hackathon-.git
    cd IDL-Hackathon-
    ```
-2. **Install Dependencies:**
+2. **Install Dependencies**  
    ```bash
    npm install
    ```
-3. **Environment Setup:**
-   - Create `.env.local` in the root:
-     ```env
-     NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
-     NEXT_PUBLIC_SARVAM_API_KEY=your_sarvam_key
-     ```
-   - Update `src/firebase.js` and Sarvam AI config files with your credentials.
-4. **Run the App Locally:**
+3. **Environment Setup**  
+   Create `.env.local` in the root:
+   ```
+   NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+   NEXT_PUBLIC_SARVAM_API_KEY=your_sarvam_key
+   ```
+   Update `src/firebase.js` and Sarvam AI config files with your details.
+4. **Run Locally**  
    ```bash
    npm start
    ```
    Visit [http://localhost:3000](http://localhost:3000)
 
-**Device Support:** Fully responsive; best voice features in Chrome/Edge.
+## 🧭 Feature Testing Guide
 
-## Demo
-Try the deployed app: [https://techheroesidlhackathondebatepro](https://techheroesidlhackathondebatepro)
+- **Chatbot:** Click “Help” or Chat icon; ask about formats, points, or debate best practices.
+- **Voice Navigation:** Press mic icon or use browser voice commands to go hands-free; try "Start Debate", "Show Analytics", "Next Feedback", or "Logout".
+- **Read Aloud & Backup Voice:** On any debate text, feedback, or navigation menu, press the voice/speaker icon for instant text-to-speech playback.
+- **Debate AI:** Select any practice mode and format—AI will fill roles, generate speeches, raise POIs, and act as your judge or trainer per session.
+- **Challenge Mode:** Engage in a realistic, competitive debate with timer, POIs, and judge feedback after each turn.
+- **Learning Mode:** Enter drills for rebuttal, POI, or structuring; AI focuses feedback on selected skills.
+- **Analysis:** Post-speech, review skill breakdowns and improvement tips in the feedback panel or results dashboard.
+
+## 🌐 Demo Link
+
+**Live Platform:**  
+[https://techheroesidlhackathondebatepro.vercel.app](https://techheroesidlhackathondebatepro.vercel.app)
+
+## 📖 Additional Tips
+
+- For best performance, use Chrome or Edge with mic access enabled for all voice features.
+- Analytics, badges, and language translation are available in both mobile and desktop views.
+- User data and sessions are auto-backed-up to your Firebase account for peace of mind.
+
+This platform is built to maximize accessibility, personalized learning, and authentic debate practice—blending cutting-edge AI, multi-mode exercises, and user-friendly design to help all debate learners reach their full potential.
