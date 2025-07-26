@@ -3,6 +3,16 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+
+interface DebateConfig {
+  mode: 'learning' | 'challenge' | 'practice' | 'quick';
+  timeLimit: number;
+  protectedTime: number;
+  poiEnabled: boolean;
+  motion?: string;
+  format?: string;
+}
+import { SarvamAIClient } from "sarvamai";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -10,8 +20,21 @@ import {
   PauseCircle, PlayCircle, Hand, Check, X, MessageSquareQuote, FileText, Bot, BrainCircuit, Download
 } from "lucide-react";
 
+interface Speaker {
+  id: string;
+  name: string;
+  role: string;
+  avatarUrl: string;
+  isSpeaking: boolean;
+}
+
+interface SpeakerAvatarProps {
+  speaker: Speaker;
+  isUser: boolean;
+}
+
 // HELPER COMPONENT: Speaker Avatar (Central Stage)
-const SpeakerAvatar = ({ speaker, isUser }) => (
+const SpeakerAvatar = ({ speaker, isUser }: SpeakerAvatarProps) => (
   <div className="flex flex-col items-center gap-3 text-center w-40">
     <div
       className={`relative rounded-full border-4 p-1.5 transition-all duration-300 ${
@@ -43,8 +66,16 @@ const SpeakerAvatar = ({ speaker, isUser }) => (
   </div>
 );
 
+interface TimerDisplayProps {
+  timeLeft: number;
+  totalTime: number;
+  isProtectedTime: boolean;
+  isDebateActive: boolean;
+  onToggleDebate: () => void;
+}
+
 // HELPER COMPONENT: Timer Display
-const TimerDisplay = ({ timeLeft, totalTime, isProtectedTime, isDebateActive, onToggleDebate }) => {
+const TimerDisplay = ({ timeLeft, totalTime, isProtectedTime, isDebateActive, onToggleDebate }: TimerDisplayProps) => {
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
   const progress = (timeLeft / totalTime) * 100;
@@ -209,14 +240,14 @@ export function LiveDebateRoom() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 1. Comprehensive State Management
-  const [debateConfig, setDebateConfig] = useState(() => location.state?.debateConfig || {
-    motion: "This House Would Implement a Universal Basic Income",
-    format: "British Parliamentary",
-    mode: "challenge", // 'practice', 'challenge', 'learning', 'quick'
+  // --- State for the debate room ---
+  const [debateConfig, setDebateConfig] = useState<DebateConfig>({
+    mode: 'learning',
     timeLimit: 7,
+    protectedTime: 1,
+    poiEnabled: true,
   });
-
+  
   const [speakers, setSpeakers] = useState([
       { id: "user_pm", name: "You", role: "Prime Minister", avatarUrl: "https://github.com/shadcn.png", isSpeaking: false },
       { id: "ai_lo", name: "AI Opponent", role: "Leader of Opposition", avatarUrl: "https://api.dicebear.com/7.x/bottts/svg?seed=ai1", isSpeaking: false },
@@ -238,6 +269,16 @@ export function LiveDebateRoom() {
   const [aiAudioUrl, setAiAudioUrl] = useState<string | null>(null);
   const [isReading, setIsReading] = useState(false);
   const [showFormatRules, setShowFormatRules] = useState(false);
+  
+  // AI and streaming states
+  const [learningError, setLearningError] = useState<string | null>(null);
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [userInput, setUserInput] = useState("");
+  const [botResponse, setBotResponse] = useState("");
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPending, setIsPending] = useState(false);
 
   // Text-to-speech function
   const readAloud = (text?: string) => {
@@ -301,12 +342,118 @@ export function LiveDebateRoom() {
      { id: "3", speaker: "You", text: "Point of information! Isn't the concept of 'free speech' being weaponized on these platforms?", timestamp: new Date(), speakerType: "user", isPOI: true },
   ]);
 
-  // --- Learning Mode Streaming State ---
-  const [liveTranscript, setLiveTranscript] = useState("");
-  const [streaming, setStreaming] = useState(false);
-  const [learningError, setLearningError] = useState<string | null>(null);
-  const sttSocketRef = useRef<WebSocket | null>(null);
-  const ttsSocketRef = useRef<WebSocket | null>(null);
+  // --- Voice Interaction State ---
+  const recognitionRef = useRef<any>(null);
+  const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+  const synthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Speak text using Chrome's TTS
+  const speak = (text: string) => {
+    if (!('speechSynthesis' in window)) return;
+    
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
+      setIsSpeaking(false);
+    };
+    
+    synthesisRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Stop speaking
+  const stopSpeaking = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
+  // Toggle voice input
+  const toggleListening = () => {
+    if (!SpeechRecognition) {
+      console.warn('Speech recognition not supported in this browser');
+      return;
+    }
+
+    if (!recognitionRef.current) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'en-IN';
+      
+      recognitionRef.current.onresult = (e: any) => {
+        const transcript = e.results[0][0].transcript;
+        setUserInput(transcript);
+        handleUserQuery(transcript);
+      };
+      
+      recognitionRef.current.onerror = (e: any) => {
+        console.error('Speech recognition error', e.error);
+        setIsListening(false);
+      };
+      
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      setUserInput("");
+      setBotResponse("");
+      recognitionRef.current.start();
+      setIsListening(true);
+    }
+  };
+
+  // Handle user query with Sarvam AI
+  const handleUserQuery = async (query: string) => {
+    if (!query.trim()) return;
+    
+    setIsPending(true);
+    setBotResponse("");
+    
+    try {
+      const client = new SarvamAIClient({ 
+        apiSubscriptionKey: "sk_lahp42w4_8K8JJohnNZZFOaNypvGOPINi" 
+      });
+      
+      const response = await client.chat.completions({
+        messages: [
+          { 
+            role: "system", 
+            content: "You are a debate coach AI. Provide concise, practical arguments, structure, evidence tips, and psychological techniques (framing, tone, persuasion) to help the user win debates." 
+          },
+          { 
+            role: "user", 
+            content: query 
+          },
+        ],
+      });
+
+      const reply = response.choices[0].message.content?.replace(/\*\*/g, "") || "I couldn't process that request.";
+      setBotResponse(reply);
+      speak(reply);
+    } catch (error) {
+      console.error('Error calling Sarvam API:', error);
+      const errorMessage = "Sorry, I'm having trouble connecting to the assistant. Please try again later.";
+      setBotResponse(errorMessage);
+      speak(errorMessage);
+    } finally {
+      setIsPending(false);
+    }
+  };
 
 
   // 2. Derived State using useMemo for efficiency
@@ -392,6 +539,8 @@ export function LiveDebateRoom() {
 
 
   // 4. Handlers for User Interaction
+  type DebateMode = 'learning' | 'challenge' | 'practice' | 'quick';
+  
   const handleModeChange = (modeKey: string, future?: boolean) => {
     if (future) {
       if (modeKey === 'practice') {
@@ -401,7 +550,19 @@ export function LiveDebateRoom() {
       }
       return;
     }
-    setDebateConfig((prev) => ({ ...prev, mode: modeKey }));
+    
+    // Ensure modeKey is one of the allowed values
+    const validModes: readonly DebateMode[] = ['learning', 'challenge', 'practice', 'quick'];
+    if (!validModes.includes(modeKey as DebateMode)) {
+      console.error(`Invalid mode: ${modeKey}`);
+      return;
+    }
+    
+    const newMode = modeKey as DebateMode;
+    setDebateConfig((prev: DebateConfig) => ({
+      ...prev,
+      mode: newMode
+    }));
   };
   const handleExitDebate = () => navigate("/feedback");
   const handleEndSpeech = () => setTimeLeft(0);
@@ -478,7 +639,7 @@ export function LiveDebateRoom() {
     setLiveTranscript("");
     setAiAnswer("");
     setAiAudioUrl("");
-    setStreaming(true);
+    setIsStreaming(true);
     
     try {
       // Make the request to the Flask backend
@@ -530,7 +691,7 @@ export function LiveDebateRoom() {
       console.error("Error calling voice assistant:", e);
       setLearningError(e.message || "An error occurred while processing your request.");
     } finally {
-      setStreaming(false);
+      setIsStreaming(false);
     }
   }
 
@@ -673,65 +834,54 @@ export function LiveDebateRoom() {
 
           {/* --- MODE-SPECIFIC UI: LEARNING MODE --- */}
           {debateConfig.mode === 'learning' && (
-            <section className="flex flex-col items-center justify-center min-h-[300px] p-8 bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-lg border border-purple-500/30">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-white mb-2">Voice Assistant</h3>
-                <p className="text-purple-200">Click below to start speaking with the AI</p>
-              </div>
-              <div className="flex flex-col items-center justify-center w-full max-w-md gap-4">
-                <div className="flex gap-4 w-full">
-                  <Button 
-                    onClick={startLearningStreaming} 
-                    className={`flex-1 text-xl font-semibold py-8 px-6 rounded-full text-white shadow-lg transform transition-all duration-200 hover:scale-105 ${
-                      streaming ? "bg-red-600 hover:bg-red-700" : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-                    }`}
-                  >
-                    {streaming ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-                        Listening...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Mic className="w-6 h-6" />
-                        Start Listening
-                      </div>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={() => readAloud(aiAnswer)}
-                    disabled={!aiAnswer}
-                    className={`flex-1 text-xl font-semibold py-8 px-6 rounded-full text-white shadow-lg transform transition-all duration-200 hover:scale-105 ${
-                      isReading ? "bg-blue-600 hover:bg-blue-700" : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-                    }`}
-                  >
-                    {isReading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-                        Reading...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Volume2 className="w-6 h-6" />
-                        Read Aloud
-                      </div>
-                    )}
-                  </Button>
-                </div>
-                {aiAnswer && (
-                  <div className="mt-6 p-4 bg-purple-950/60 rounded-lg text-purple-100 w-full max-w-2xl">
-                    <div className="font-medium mb-2 text-purple-300">AI Response:</div>
-                    <div className="text-white">{aiAnswer}</div>
+            <section className="flex flex-col items-center justify-center min-h-[300px] p-6 bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-lg border border-purple-500/30">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-white mb-3">Voice Assistant</h3>
+                <p className="text-purple-200 mb-6">Click the button below to speak with the AI assistant</p>
+                
+                {/* Voice Input Button */}
+                <button
+                  onClick={toggleListening}
+                  className={`relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    isListening 
+                      ? 'bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.5)]' 
+                      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg'
+                  }`}
+                  disabled={isSpeaking}
+                >
+                  {isListening ? (
+                    <div className="flex flex-col items-center">
+                      <div className="w-3 h-3 bg-white rounded-full mb-1 animate-pulse"></div>
+                      <span className="text-white text-sm">Listening...</span>
+                    </div>
+                  ) : (
+                    <Mic className="w-8 h-8 text-white" />
+                  )}
+                </button>
+                
+                {/* User Input Display */}
+                {userInput && (
+                  <div className="mt-6 w-full max-w-2xl bg-purple-900/30 rounded-lg p-4 border border-purple-500/30">
+                    <p className="text-purple-200 text-sm font-medium mb-1">You said:</p>
+                    <p className="text-white">{userInput}</p>
                   </div>
                 )}
-                {aiAudioUrl && (
-                  <div className="mt-4 w-full max-w-md">
-                    <audio 
-                      src={aiAudioUrl} 
-                      controls 
-                      autoPlay 
-                      className="w-full h-10"
-                    />
+                
+                {/* Bot Response */}
+                {botResponse && (
+                  <div className="mt-4 w-full max-w-2xl bg-blue-900/30 rounded-lg p-4 border border-blue-500/30">
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="text-blue-200 text-sm font-medium">Assistant:</p>
+                      {isSpeaking ? (
+                        <button 
+                          onClick={stopSpeaking}
+                          className="text-blue-300 hover:text-white text-xs flex items-center gap-1"
+                        >
+                          <PauseCircle className="w-4 h-4" /> Stop
+                        </button>
+                      ) : null}
+                    </div>
+                    <p className="text-white">{botResponse}</p>
                   </div>
                 )}
               </div>
@@ -740,54 +890,43 @@ export function LiveDebateRoom() {
 
           {/* --- MODE-SPECIFIC UI: CHALLENGE MODE --- */}
           {debateConfig.mode === 'challenge' && (
-            <section className="bg-yellow-900/20 border border-yellow-400/30 rounded-lg p-4 mb-2 flex flex-col gap-4 items-center animate-fade-in">
+            <section className="bg-yellow-900/20 border border-yellow-400/30 rounded-lg p-6 mb-2 flex flex-col gap-6 items-center animate-fade-in">
               <div className="w-full flex flex-col gap-2 text-center">
-                <div className="font-bold text-yellow-200 flex items-center gap-2 justify-center"><Bot className="w-5 h-5"/>Challenge Mode:</div>
+                <div className="font-bold text-yellow-200 flex items-center gap-2 justify-center"><Bot className="w-5 h-5"/>Challenge Mode</div>
                 <div className="text-yellow-100 text-sm">Debate against a skilled AI opponent. No coaching or hints during speeches.</div>
                 <div className="mt-1 text-xs text-yellow-200">Judge-style feedback will be provided after each round.</div>
               </div>
-
-              <div className="flex gap-4 w-full max-w-md">
-                {/* Start Listening Button (shared with Learning mode) */}
-                <Button 
-                  onClick={startLearningStreaming} 
-                  className={`flex-1 text-xl font-semibold py-6 px-4 rounded-full text-white shadow-lg transform transition-all duration-200 hover:scale-105 ${
-                    streaming ? "bg-red-600 hover:bg-red-700" : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+              
+              {/* Voice Input Button for Challenge Mode */}
+              <div className="flex flex-col items-center gap-4 w-full">
+                <button
+                  onClick={toggleListening}
+                  className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    isListening 
+                      ? 'bg-red-600 shadow-[0_0_20px_rgba(239,68,68,0.5)]' 
+                      : 'bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 shadow-lg'
                   }`}
+                  disabled={isSpeaking}
                 >
-                  {streaming ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-                      Listening...
+                  {isListening ? (
+                    <div className="flex flex-col items-center">
+                      <div className="w-3 h-3 bg-white rounded-full mb-1 animate-pulse"></div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <Mic className="w-6 h-6" />
-                      Start Listening
-                    </div>
+                    <Mic className="w-6 h-6 text-white" />
                   )}
-                </Button>
+                </button>
+                <p className="text-yellow-200 text-sm">
+                  {isListening ? 'Listening...' : 'Tap to speak'}
+                </p>
                 
-                {/* Read Aloud Button */}
-                <Button
-                  onClick={() => readAloud()}
-                  disabled={!aiAnswer}
-                  className={`flex-1 text-xl font-semibold py-6 px-4 rounded-full text-white shadow-lg transform transition-all duration-200 hover:scale-105 ${
-                    isReading ? "bg-blue-600 hover:bg-blue-700" : "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-                  }`}
-                >
-                  {isReading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-                      Reading...
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Volume2 className="w-6 h-6" />
-                      Read Aloud
-                    </div>
-                  )}
-                </Button>
+                {/* User Input Display */}
+                {userInput && (
+                  <div className="w-full max-w-2xl bg-yellow-900/30 rounded-lg p-3 border border-yellow-500/30 mt-2">
+                    <p className="text-yellow-200 text-sm font-medium mb-1">You said:</p>
+                    <p className="text-white text-sm">{userInput}</p>
+                  </div>
+                )}
               </div>
             </section>
           )}

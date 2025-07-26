@@ -114,28 +114,42 @@ export const NewChatbot = () => {
       {/* Slide-in Panel */}
       {open && (
         <Card className="fixed bottom-20 sm:bottom-24 right-2 sm:right-6 w-[90vw] sm:w-96 h-[500px] flex flex-col shadow-xl rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom-5 z-[60]">
-          <div className="p-4 border-b flex items-center justify-between">
-            <h3 className="font-semibold text-center flex-1">Debate Assistant</h3>
-            <button
-              onClick={() => {
-                setSpeechEnabled(prev => {
-                  const next = !prev;
-                  if (!next) {
-                    window.speechSynthesis.cancel();
-                  } else {
-                    // speak last assistant message if available
-                    const last = messages.slice().reverse().find(m=>m.role==='assistant');
-                    if (last) speak(last.content);
-                  }
-                  return next;
-                });
-              }}
-              className="p-1" >
-              {speechEnabled ? <Volume2 className="w-5 h-5"/> : <VolumeX className="w-5 h-5"/>}
-            </button>
-            <button onClick={toggleListen} className="p-1 ml-2">
-              {listening ? <MicOff className="w-5 h-5"/> : <Mic className="w-5 h-5"/>}
-            </button>
+          <div className="p-4 border-b flex items-center justify-center space-x-4">
+            <h3 className="font-semibold">Debate Assistant</h3>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => {
+                  setSpeechEnabled(prev => {
+                    const next = !prev;
+                    if (!next) {
+                      window.speechSynthesis.cancel();
+                    } else {
+                      // speak last assistant message if available
+                      const last = messages.slice().reverse().find(m=>m.role==='assistant');
+                      if (last) speak(last.content);
+                    }
+                    return next;
+                  });
+                }}
+                className={`p-2 rounded-full ${
+                  speechEnabled 
+                    ? 'bg-primary/10 text-primary' 
+                    : 'text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {speechEnabled ? <Volume2 className="w-5 h-5"/> : <VolumeX className="w-5 h-5"/>}
+              </button>
+              <button 
+                onClick={toggleListen} 
+                className={`p-2 rounded-full ${
+                  listening 
+                    ? 'bg-destructive/10 text-destructive' 
+                    : 'text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {listening ? <MicOff className="w-5 h-5"/> : <Mic className="w-5 h-5"/>}
+              </button>
+            </div>
           </div>
           <div ref={bodyRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-background">
             

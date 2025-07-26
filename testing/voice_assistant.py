@@ -85,18 +85,14 @@ async def _text_to_speech_async(text: str, output_path: str = TTS_OUTPUT_PATH, *
             await ws.configure(target_language_code="en-IN", speaker="anushka", pitch=pitch, pace=pace)
             await ws.convert(text)
             await ws.flush()
-            with open(output_path, "wb") as f:
-                async for message in ws:
-                    if isinstance(message, AudioOutput):
-                        audio_chunk = base64.b64decode(message.data.audio)
-                        # Stream chunk to client in real time
-                        socketio.emit('tts_chunk', audio_chunk, namespace='/voice')
-                        # Still write to file for full mp3
-                        f.write(audio_chunk)
-                        f.flush()
+            async for message in ws:
+                if isinstance(message, AudioOutput):
+                    audio_chunk = base64.b64decode(message.data.audio)
+                    # Stream chunk to client in real time
+                    socketio.emit('tts_chunk', audio_chunk, namespace='/voice')
         # Notify clients that TTS stream is done
         socketio.emit('tts_complete', namespace='/voice')
-        print(f"TTS audio saved to {output_path}")
+        print(f"TTS audio streamed to client")
         return output_path
     except Exception as e:
         print(f"Error in async TTS: {e}")
@@ -152,15 +148,11 @@ def run_voice_assistant():
     if not response_text:
         return {"error": "Failed to get a chat response."}
 
-    # Use a slightly slower, more natural pace by default
-    tts_file = text_to_speech_sync(response_text, TTS_OUTPUT_PATH, pace=0.9)
-    if not tts_file:
-        return {"error": "Failed to generate the audio response."}
+    text_to_speech_sync(response_text, pace=0.9)
 
     return {
         "transcript": transcript,
         "response": response_text,
-        "audio_file": tts_file
     }
 
 if __name__ == "__main__":

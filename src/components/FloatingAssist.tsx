@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Mic, Volume2, ChevronLeft, Bot } from "lucide-react";
+import { Mic, Volume2, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export const FloatingAssist = () => {
@@ -89,7 +89,15 @@ export const FloatingAssist = () => {
         onClick={togglePanel}
         className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg hover:bg-primary/90 transition-all text-primary-foreground"
       >
-        {open ? <ChevronLeft className="w-5 h-5" /> : <Bot className="w-6 h-6" />}
+        {open ? (
+          <ChevronLeft className="w-5 h-5" />
+        ) : (
+          <img 
+            src="/voice-logo-white.svg" 
+            alt="Voice Navigation" 
+            className="w-6 h-6"
+          />
+        )}
       </button>
     </div>
   );
